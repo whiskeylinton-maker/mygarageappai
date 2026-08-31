@@ -7224,9 +7224,40 @@ function togglePlanCard(key){
   content.style.display = isOpen ? 'none' : 'block';
   arrow.textContent = isOpen ? '↓' : '↑';
 }
-function subscribeNow(planKey){
-  alert("Online payment isn't connected yet — starting your free trial instead so you can explore the plan. The 10% first-month discount will apply once payment is live.");
-  startTrial(planKey);
+// Real architecture, same pattern as payNowCreateCheckoutSession: this never
+// collects a card itself. It asks the secure backend (api/create-subscription-
+// checkout.js) to create a Stripe Checkout Session for the shop's own
+// subscription, then hands the browser off to Stripe's hosted page. If that
+// backend isn't reachable yet (env not configured, endpoint not deployed),
+// this fails cleanly to an honest message and offers the free trial instead
+// of pretending to charge anything.
+let mktSubscribeState = { loadingPlan: null, error: null };
+async function subscribeNow(planKey){
+  if(mktSubscribeState.loadingPlan) return;
+  mktSubscribeState.loadingPlan = planKey;
+  mktSubscribeState.error = null;
+  render();
+  try{
+    const res = await fetch('/api/create-subscription-checkout', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        planKey,
+        shopId: SHOP_ID,
+        shopEmail: DATA.shop?.email || '',
+        useDiscount: true,
+      }),
+    });
+    if(!res.ok) throw new Error('checkout session request failed');
+    const data = await res.json();
+    if(!data || !data.url) throw new Error('no checkout url returned');
+    window.location.href = data.url; // hand off to Stripe's own hosted, PCI-compliant page
+  }catch(err){
+    mktSubscribeState.loadingPlan = null;
+    mktSubscribeState.error = "Online payment isn't connected yet — starting your free trial instead so you can explore the plan. The 10% first-month discount will apply once payment is live.";
+    render();
+    startTrial(planKey);
+  }
 }
 
 function renderMktPricing(){
@@ -7255,8 +7286,9 @@ function renderMktPricing(){
       <div class="plan2-toggle" onclick="togglePlanCard('start')">View Full Details & FAQ <span id="plan2-arrow-start">↓</span></div>
       <div style="margin-top:auto;">
         <button class="plan2-btn-primary" onclick="startTrial('start')">Start Free Trial</button>
-        <button class="plan2-btn-secondary" onclick="subscribeNow('start')">Subscribe Now</button>
+        <button class="plan2-btn-secondary" onclick="subscribeNow('start')" ${mktSubscribeState.loadingPlan==='start'?'disabled':''}>${mktSubscribeState.loadingPlan==='start'?'Redirecting to secure checkout…':'Subscribe Now'}</button>
         <div style="text-align:center;font-size:10.5px;color:var(--success);font-weight:700;margin-top:6px;">10% off your first month ($157.50) — then $175/mo</div>
+        ${mktSubscribeState.error&&mktSubscribeState.loadingPlan===null?`<div style="margin-top:8px;padding:10px 12px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:9px;font-size:11px;color:var(--danger);">${mktSubscribeState.error}</div>`:''}
         <button class="btn-ghost" style="width:100%;margin-top:6px;font-size:11.5px;" onclick="alert('Demo scheduling isn\\'t connected yet — reach out directly to schedule a demo for now.')">Schedule Demo</button>
       </div>
     </div>
@@ -7276,8 +7308,9 @@ function renderMktPricing(){
       <div class="plan2-toggle" onclick="togglePlanCard('pro')">View Full Details & FAQ <span id="plan2-arrow-pro">↓</span></div>
       <div style="margin-top:auto;">
         <button class="plan2-btn-primary" onclick="startTrial('pro')">Start Free Trial</button>
-        <button class="plan2-btn-secondary" onclick="subscribeNow('pro')">Subscribe Now</button>
+        <button class="plan2-btn-secondary" onclick="subscribeNow('pro')" ${mktSubscribeState.loadingPlan==='pro'?'disabled':''}>${mktSubscribeState.loadingPlan==='pro'?'Redirecting to secure checkout…':'Subscribe Now'}</button>
         <div style="text-align:center;font-size:10.5px;color:var(--success);font-weight:700;margin-top:6px;">10% off your first month ($247.50) — then $275/mo</div>
+        ${mktSubscribeState.error&&mktSubscribeState.loadingPlan===null?`<div style="margin-top:8px;padding:10px 12px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:9px;font-size:11px;color:var(--danger);">${mktSubscribeState.error}</div>`:''}
         <button class="btn-ghost" style="width:100%;margin-top:6px;font-size:11.5px;" onclick="alert('Demo scheduling isn\\'t connected yet — reach out directly to schedule a demo for now.')">Schedule Demo</button>
       </div>
     </div>

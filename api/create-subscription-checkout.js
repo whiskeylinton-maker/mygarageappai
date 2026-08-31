@@ -34,17 +34,17 @@
 
 import Stripe from 'stripe';
 
-// TEST-MODE values, confirmed directly in Stripe's dashboard on Aug 30.
-// These only work with a test-mode (sk_test_...) secret key. Once the full
-// checkout flow is proven working end to end with these, the exact same
-// products/coupon need to be recreated in LIVE mode, and these three values
-// swapped for their live-mode equivalents before this can take real payments.
+// LIVE-MODE values, provided directly by the account owner. These only work
+// with a live (sk_live_...) secret key -- if STRIPE_SECRET_KEY in Vercel is
+// still a test key (sk_test_...), Stripe will reject these with a "No such
+// price"/"No such coupon" error, since live and test mode are entirely
+// separate object spaces in Stripe.
 const PRICE_IDS = {
-  start: 'price_1UAHx3EPcevq976KPZONIIOY', // Garage Shop, $175/mo (test mode)
-  pro:   'price_1UAI2bEPcevq976KZV0vNEga', // Garage Pro, $275/mo (test mode)
+  start: 'price_1UAItNEPcevq976KlWhoWkbt', // Garage Shop, $175/mo (live mode)
+  pro:   'price_1UAIvtEPcevq976KdBSF985M', // Garage Pro, $275/mo (live mode)
 };
 
-const FIRST_MONTH_COUPON_ID = '92BGyp9E'; // 10% off, duration:"once" (test mode)
+const FIRST_MONTH_COUPON_ID = 'aqCE5BC7'; // 10% off, duration:"once" (live mode)
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

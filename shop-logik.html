@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Logik — Run Your Entire Auto Shop From One System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --black:#08090d; --navy:#0c101c; --card:#121728; --card2:#171d33; --border:#232a45;
+    --red:#e0272c; --red-dark:#b91d22; --white:#ffffff; --gray:#a3abc2; --gray-dim:#6b7386;
+    --green:#3ddc84; --blue:#4f8fe8; --gold:#e8b23d; --orange:#f2801b;
+    --health-green:#3ddc84; --health-yellow:#e8c53d; --health-orange:#f2801b; --health-red:#e0272c;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--black); color:var(--white); font-family:'Inter',-apple-system,Arial,sans-serif; -webkit-font-smoothing:antialiased;}
+  a{color:inherit; text-decoration:none;} button,input,select{font-family:inherit;} button{cursor:pointer;}
+  .display{font-family:'Archivo Black','Inter',sans-serif;}
+  .wrap{max-width:1400px; margin:0 auto; padding:0 40px;}
+  :focus-visible{outline:2px solid var(--red); outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+
+  /* ============ MARKETING SITE ============ */
+  header{position:sticky; top:0; z-index:80; background:rgba(8,9,13,.94); backdrop-filter:blur(10px); border-bottom:1px solid var(--border);}
+  .navrow{display:flex; align-items:center; gap:24px; padding:16px 40px; max-width:1400px; margin:0 auto;}
+  .logo{display:flex; align-items:center; gap:10px;}
+  .logo .lt{display:flex; flex-direction:column; line-height:1;}
+  .logo .lt .word{font-family:'Archivo Black'; font-size:21px; letter-spacing:.5px;}
+  .logo .lt .word span{color:var(--red);}
+  .logo .lt .tag{font-size:9px; letter-spacing:2px; color:var(--gray-dim); margin-top:3px; font-weight:600;}
+  nav.mainlinks{display:flex; align-items:center; gap:2px; margin-left:8px;}
+  nav.mainlinks button{background:none; border:none; font-size:13px; font-weight:600; color:var(--gray); padding:10px 13px; border-radius:6px;}
+  nav.mainlinks button:hover{color:var(--white);}
+  .navactions{display:flex; align-items:center; gap:10px; margin-left:auto;}
+  .btn-login{background:transparent; color:var(--white); border:1px solid var(--border); padding:10px 20px; border-radius:6px; font-size:13px; font-weight:700;}
+  .btn-login:hover{border-color:var(--gray-dim);}
+  .btn-cta{background:var(--red); color:#fff; border:none; padding:11px 22px; border-radius:6px; font-size:13px; font-weight:700;}
+  .btn-cta:hover{background:var(--red-dark);}
+
+  .hero{position:relative; overflow:hidden; padding:70px 0 56px; border-bottom:1px solid var(--border);
+    background:radial-gradient(ellipse 900px 500px at 12% 8%, rgba(224,39,44,0.10), transparent 60%), linear-gradient(180deg, var(--black) 0%, var(--navy) 100%);}
+  .herogrid{display:grid; grid-template-columns:0.92fr 1.28fr; gap:44px; align-items:center;}
+  .eyebrow{color:var(--red); font-size:13px; font-weight:800; letter-spacing:1.5px; margin-bottom:16px;}
+  .hero h1{font-family:'Archivo Black'; font-size:44px; line-height:1.06; letter-spacing:-.5px; margin-bottom:18px;}
+  .hero h1 .redline{color:var(--red); display:block;}
+  .hero p.lede{font-size:15.5px; line-height:1.65; color:var(--gray); max-width:440px; margin-bottom:26px;}
+  .herobtns{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:28px;}
+  .btn-primary-lg{display:inline-flex; align-items:center; gap:9px; background:var(--red); color:#fff; border:none; padding:15px 24px; border-radius:8px; font-size:14.5px; font-weight:700; box-shadow:0 8px 24px rgba(224,39,44,.25);}
+  .btn-primary-lg:hover{background:var(--red-dark);}
+  .btn-outline-lg{display:inline-flex; align-items:center; gap:9px; background:transparent; color:#fff; border:1.5px solid var(--border); padding:15px 24px; border-radius:8px; font-size:14.5px; font-weight:700;}
+  .btn-outline-lg:hover{border-color:var(--gray-dim);}
+  .benefits{display:flex; gap:26px; flex-wrap:wrap;}
+  .benefit{display:flex; align-items:center; gap:9px;}
+  .benefit .bic{width:36px; height:36px; border-radius:9px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .benefit .b1{font-size:12px; font-weight:700;} .benefit .b2{font-size:11px; color:var(--gray-dim);}
+
+  /* ---- MONITOR ---- */
+  .monitorwrap{position:relative;}
+  .monitor{width:100%; background:#05060a; border-radius:16px; padding:16px 16px 0; border:1px solid #262c44; box-shadow:0 34px 90px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.02) inset;}
+  #appRoot{--m-bg:var(--navy); --m-panel:var(--card); --m-card:var(--card); --m-card2:var(--card2); --m-border:var(--border);
+    --m-text:var(--white); --m-text2:var(--gray); --m-text3:var(--gray-dim);
+    background:var(--m-bg); border-radius:8px; overflow:hidden; display:flex; min-height:620px; border:1px solid var(--m-border); font-size:13px; color:var(--m-text);}
+  #appRoot.light{--m-bg:#f4f5f9; --m-panel:#ffffff; --m-card:#ffffff; --m-card2:#eef0f6; --m-border:#dfe3ee;
+    --m-text:#171b2b; --m-text2:#4b5372; --m-text3:#8b93ab;}
+  .mstand{width:130px; height:18px; background:linear-gradient(180deg,#2a3049,#161b2c); margin:0 auto; border-radius:0 0 6px 6px;}
+  .mbase{width:260px; height:11px; background:#12162650; margin:0 auto 44px; border-radius:50%; filter:blur(1.5px);}
+
+  .msidebar{width:168px; background:var(--m-panel); border-right:1px solid var(--m-border); padding:14px 10px; flex-shrink:0; overflow-y:auto;}
+  .mlogo{font-family:'Archivo Black'; font-size:14px; padding:2px 6px 14px; letter-spacing:.2px; color:var(--m-text);}
+  .mlogo span{color:var(--red);}
+  .mnavitem{display:flex; align-items:center; gap:8px; padding:8px 9px; border-radius:6px; color:var(--m-text3); font-size:12px; font-weight:600; margin-bottom:2px; width:100%; text-align:left; background:none; border:none;}
+  .mnavitem:hover{background:var(--m-card2); color:var(--m-text);}
+  .mnavitem.active{background:var(--red); color:#fff;}
+  .mnavitem .dot{width:5px; height:5px; border-radius:50%; background:currentColor; opacity:.85; flex-shrink:0;}
+
+  .mmain{flex:1; padding:18px 22px; min-width:0; overflow-y:auto; max-height:620px;}
+  .mtop{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;}
+  .mtop .mh{font-size:17px; font-weight:800; color:var(--m-text);}
+  .mtop .mmeta{font-size:10.5px; color:var(--m-text3); display:flex; gap:12px; align-items:center;}
+  .mwelcome{font-size:11px; color:var(--m-text3); margin-bottom:14px;}
+  .mwelcome b{color:var(--m-text);}
+
+  .mkpis{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px;}
+  .mkpi{background:var(--m-card); border:1px solid var(--m-border); border-radius:9px; padding:11px 12px;}
+  .mkpi .l{font-size:9px; color:var(--m-text3); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;}
+  .mkpi .v{font-size:17px; font-weight:800; color:var(--m-text);}
+  .mkpi .d{font-size:9px; color:var(--green); margin-top:4px;}
+
+  .mrow2{display:grid; grid-template-columns:1.4fr 1fr; gap:10px; margin-bottom:10px;}
+  .mcard{background:var(--m-card); border:1px solid var(--m-border); border-radius:9px; padding:12px;}
+  .ch{font-size:9.5px; font-weight:700; color:var(--m-text2); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;}
+  .mdonut{width:78px; height:78px; border-radius:50%; margin:2px auto 6px; background:conic-gradient(var(--red) 0% 49%, var(--blue) 49% 68%, var(--green) 68% 88%, var(--gold) 88% 100%); display:flex; align-items:center; justify-content:center;}
+  .mdonut .hole{width:42px; height:42px; border-radius:50%; background:var(--m-card); display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:800; text-align:center; line-height:1.15; color:var(--m-text);}
+  .mlegend{font-size:9.5px; color:var(--m-text3); display:flex; flex-direction:column; gap:3px;}
+  .mlegend span.sw{display:inline-block; width:6px; height:6px; border-radius:2px; margin-right:5px;}
+  .mlist{display:flex; flex-direction:column; gap:6px;}
+  .mlist .li{display:flex; justify-content:space-between; font-size:10.5px; color:var(--m-text2);}
+  .mlist .li b{color:var(--m-text); font-weight:600;} .mlist .li .warn{color:var(--red); font-weight:700;} .mlist .li .pos{color:var(--green); font-weight:700;}
+  .m3col{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+
+  .mtable{width:100%; border-collapse:collapse; font-size:11.5px;}
+  .mtable th{text-align:left; font-size:9px; color:var(--m-text3); text-transform:uppercase; letter-spacing:.3px; padding:6px 8px; border-bottom:1px solid var(--m-border);}
+  .mtable td{padding:8px 8px; border-bottom:1px solid var(--m-border); color:var(--m-text2);}
+  .mtable td b{color:var(--m-text);}
+  .mtable tr:last-child td{border-bottom:none;}
+  .mbadge{padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; display:inline-block;}
+  .b-sched{background:#2a2f4d; color:#8fa0f5;} .b-checked{background:#1c3350; color:#6db4f0;} .b-progress{background:#123d24; color:#4ade80;}
+  .b-waiting{background:#4a1616; color:#f2a3a3;} .b-ready{background:#3a2f0d; color:#f0c05a;} .b-done{background:#1a2e22; color:#3ddc84;}
+  .b-draft{background:#2c2f3d; color:#a3abc2;} .b-sent{background:#1c3350; color:#6db4f0;} .b-approved{background:#123d24; color:#4ade80;}
+  .b-paid{background:#123d24; color:#4ade80;} .b-unpaid{background:#4a1616; color:#f2a3a3;}
+
+  .mbtn{background:var(--red); color:#fff; border:none; padding:7px 13px; border-radius:6px; font-size:11px; font-weight:700;}
+  .mbtn:hover{background:var(--red-dark);}
+  .mbtn-ghost{background:var(--m-card2); color:var(--m-text); border:1px solid var(--m-border); padding:7px 13px; border-radius:6px; font-size:11px; font-weight:700;}
+  .mbtn-sm{padding:4px 9px; font-size:10px;}
+  .minput, .mselect, .mtextarea{width:100%; background:var(--m-card2); border:1px solid var(--m-border); color:var(--m-text); padding:8px 10px; border-radius:6px; font-size:11.5px; outline:none;}
+  .minput:focus, .mselect:focus{border-color:var(--red);}
+  .mfield{margin-bottom:9px;} .mfield label{display:block; font-size:9.5px; color:var(--m-text3); margin-bottom:4px; text-transform:uppercase; letter-spacing:.3px;}
+  .mflex{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .msearch{max-width:260px;}
+  .mgrid2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .mtoggle{display:inline-flex; background:var(--m-card2); border-radius:20px; padding:3px; border:1px solid var(--m-border);}
+  .mtoggle button{border:none; background:none; padding:6px 14px; border-radius:16px; font-size:10.5px; font-weight:700; color:var(--m-text3);}
+  .mtoggle button.active{background:var(--red); color:#fff;}
+  .switch{position:relative; width:38px; height:21px; background:var(--m-card2); border:1px solid var(--m-border); border-radius:20px; flex-shrink:0;}
+  .switch .knob{position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--m-text3); transition:.15s;}
+  .switch.on{background:var(--red);} .switch.on .knob{left:19px; background:#fff;}
+  .memptynote{color:var(--m-text3); font-size:11px; padding:10px 0;}
+  .mchip{display:inline-block; background:var(--m-card2); border:1px solid var(--m-border); color:var(--m-text2); font-size:9.5px; padding:3px 8px; border-radius:12px; margin:2px 3px 2px 0;}
+  .mcal{display:grid; grid-template-columns:repeat(5,1fr); gap:8px;}
+  .mcal .day{background:var(--m-card); border:1px solid var(--m-border); border-radius:8px; padding:8px; min-height:150px;}
+  .mcal .day h4{font-size:10px; color:var(--m-text3); text-transform:uppercase; margin-bottom:6px; letter-spacing:.3px;}
+  .mcal .ev{background:var(--m-card2); border-left:2px solid var(--red); border-radius:4px; padding:5px 7px; font-size:9.5px; margin-bottom:5px; color:var(--m-text2);}
+  .mcal .ev b{display:block; color:var(--m-text); font-size:10px;}
+  .mmonth{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .mmonth .cell{background:var(--m-card); border:1px solid var(--m-border); border-radius:5px; padding:5px; font-size:9.5px; min-height:36px; color:var(--m-text3); position:relative;}
+  .mmonth .cell .dotev{width:5px; height:5px; border-radius:50%; background:var(--red); position:absolute; bottom:4px; left:4px;}
+  .aichat{display:flex; flex-direction:column; gap:8px; max-height:150px; overflow-y:auto; margin:10px 0;}
+  .aichat .me{align-self:flex-end; background:var(--red); color:#fff; padding:6px 11px; border-radius:8px; font-size:11px; max-width:80%;}
+  .aichat .ai{align-self:flex-start; background:var(--m-card2); color:var(--m-text); padding:6px 11px; border-radius:8px; font-size:11px; max-width:88%;}
+  .barrow{margin-bottom:10px;} .barrow .top{display:flex; justify-content:space-between; font-size:10.5px; margin-bottom:5px; color:var(--m-text2);}
+  .barrow .track{height:6px; background:var(--m-card2); border-radius:5px; overflow:hidden;}
+  .barrow .fill{height:100%; background:linear-gradient(90deg,var(--red),var(--blue)); border-radius:5px;}
+  .mtabs{display:flex; gap:4px; flex-wrap:wrap; margin-bottom:12px; border-bottom:1px solid var(--m-border); padding-bottom:0;}
+  .mtabs button{background:none; border:none; color:var(--m-text3); font-size:11px; font-weight:700; padding:8px 4px; margin-right:14px; border-bottom:2px solid transparent;}
+  .mtabs button.active{color:var(--m-text); border-bottom-color:var(--red);}
+
+  /* ---- HEALTH COLOR SYSTEM ---- */
+  .health-dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; flex-shrink:0;}
+  .health-green{color:var(--health-green);} .health-yellow{color:var(--health-yellow);} .health-orange{color:var(--health-orange);} .health-red{color:var(--health-red);}
+  .health-dot.health-green{background:var(--health-green);} .health-dot.health-yellow{background:var(--health-yellow);} .health-dot.health-orange{background:var(--health-orange);} .health-dot.health-red{background:var(--health-red);}
+  .mkpi.health-green{border-color:rgba(61,220,132,.4);} .mkpi.health-yellow{border-color:rgba(232,197,61,.4);} .mkpi.health-orange{border-color:rgba(242,128,27,.45);} .mkpi.health-red{border-color:rgba(224,39,44,.5);}
+  .healthbadge{display:inline-flex; align-items:center; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; background:var(--m-card2);}
+
+  /* ---- TOUCH TARGETS ---- */
+  @media (pointer:coarse){
+    .mnavitem{padding:12px 10px;} .mbtn, .mbtn-ghost{padding:11px 16px; font-size:12px;} .mbtn-sm{padding:9px 13px; font-size:11px;}
+    .minput, .mselect{padding:11px 12px;} .switch{width:44px; height:25px;} .switch .knob{width:19px; height:19px;} .switch.on .knob{left:23px;}
+  }
+
+  @media(max-width:1100px){ .msidebar{width:56px;} .mnavitem span.lbl{display:none;} .mnavitem{justify-content:center;} .mlogo{text-align:center; font-size:11px;} .mkpis{grid-template-columns:repeat(2,1fr);} .mrow2{grid-template-columns:1fr;} .m3col{grid-template-columns:1fr;} .mgrid2{grid-template-columns:1fr;} .mcal{grid-template-columns:1fr;} }
+
+  /* ---- FEATURES / PRICING / ABOUT ---- */
+  .section{padding:76px 0; border-bottom:1px solid var(--border);}
+  .sectionhead{max-width:560px; margin-bottom:44px;}
+  .sectionhead .eyebrow{margin-bottom:12px;}
+  .sectionhead h2{font-family:'Archivo Black'; font-size:32px; line-height:1.12; margin-bottom:14px;}
+  .sectionhead p{color:var(--gray); font-size:15px; line-height:1.6;}
+  .featgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .featcard{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:26px;}
+  .featcard .fic{width:44px; height:44px; border-radius:10px; background:var(--card2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; margin-bottom:16px;}
+  .featcard h3{font-size:16px; font-weight:800; margin-bottom:8px;}
+  .featcard p{font-size:13.5px; color:var(--gray-dim); line-height:1.55;}
+
+  .pricegrid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .pricecard{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:30px 26px; display:flex; flex-direction:column;}
+  .pricecard.feat{border-color:var(--red); box-shadow:0 0 0 1px var(--red), 0 20px 50px rgba(224,39,44,.12); position:relative;}
+  .pricecard.feat::before{content:'MOST POPULAR'; position:absolute; top:-11px; left:26px; background:var(--red); color:#fff; font-size:9.5px; font-weight:800; letter-spacing:1px; padding:4px 10px; border-radius:5px;}
+  .pricecard h3{font-size:14px; font-weight:800; letter-spacing:.4px; margin-bottom:12px; color:var(--gray);}
+  .pricecard .price{font-family:'Archivo Black'; font-size:38px; margin-bottom:4px;}
+  .pricecard .price span{font-family:'Inter'; font-size:14px; color:var(--gray-dim); font-weight:600;}
+  .pricecard .pdesc{font-size:12.5px; color:var(--gray-dim); margin-bottom:22px;}
+  .pricecard ul{list-style:none; margin-bottom:26px; flex:1;}
+  .pricecard li{font-size:13px; color:var(--gray); padding:8px 0; border-top:1px solid var(--border); display:flex; gap:9px; align-items:flex-start;}
+  .pricecard li:first-child{border-top:none;}
+
+  .aboutwrap{display:grid; grid-template-columns:1fr 1fr; gap:50px; align-items:center;}
+  .aboutwrap p{color:var(--gray); font-size:15px; line-height:1.7; margin-bottom:16px;}
+  .aboutstats{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .aboutstat{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px;}
+  .aboutstat .v{font-family:'Archivo Black'; font-size:26px; color:var(--red);}
+  .aboutstat .l{font-size:11.5px; color:var(--gray-dim); margin-top:4px;}
+
+  /* ---- STATS ---- */
+  .stats{background:var(--navy); padding:52px 0 58px; border-bottom:1px solid var(--border);}
+  .stats .trusted{text-align:center; color:var(--red); font-size:12.5px; font-weight:800; letter-spacing:2px; margin-bottom:34px;}
+  .statrow{display:flex; align-items:center; justify-content:space-between;}
+  .statitem{display:flex; align-items:center; gap:14px; flex:1; justify-content:center; padding:0 12px;}
+  .statitem .sic{width:50px; height:50px; border-radius:12px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .statitem .sv{font-family:'Archivo Black'; font-size:24px; line-height:1;}
+  .statitem .sl{font-size:11px; color:var(--gray-dim); font-weight:700; letter-spacing:.4px; margin-top:4px;}
+  .statdiv{width:1px; height:52px; background:var(--border); flex-shrink:0;}
+
+  footer{padding:36px 0; text-align:center; color:var(--gray-dim); font-size:12.5px;}
+
+  @media (max-width:1080px){
+    .herogrid{grid-template-columns:1fr; gap:36px;}
+    .hero h1{font-size:38px;}
+    nav.mainlinks{display:none;}
+    .featgrid, .pricegrid{grid-template-columns:1fr;}
+    .aboutwrap{grid-template-columns:1fr;}
+    .statrow{flex-wrap:wrap; row-gap:26px;} .statdiv{display:none;} .statitem{flex:1 1 40%;}
+  }
+  @media (max-width:640px){
+    .wrap, .navrow{padding-left:18px; padding-right:18px;}
+    .hero{padding:38px 0;} .hero h1{font-size:29px;}
+    .herobtns{flex-direction:column;} .btn-primary-lg,.btn-outline-lg{justify-content:center;}
+    .section{padding:52px 0;} .sectionhead h2{font-size:25px;}
+    .statitem{flex:1 1 100%;}
+    #appRoot{min-height:520px;}
+    .mmain{max-height:520px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="navrow">
+    <a href="#top" class="logo" aria-label="Shop Logik home">
+      <svg width="32" height="32" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="15" stroke="#e0272c" stroke-width="2.5"/><circle cx="17" cy="17" r="6" stroke="#e0272c" stroke-width="2.5"/><g stroke="#e0272c" stroke-width="2.5" stroke-linecap="round"><line x1="17" y1="1" x2="17" y2="6"/><line x1="17" y1="28" x2="17" y2="33"/><line x1="1" y1="17" x2="6" y2="17"/><line x1="28" y1="17" x2="33" y2="17"/></g></svg>
+      <div class="lt"><div class="word">SHOP<span>LOGIK</span></div><div class="tag">POS &amp; SHOP MANAGEMENT</div></div>
+    </a>
+    <nav class="mainlinks">
+      <button onclick="scrollToId('top')">Home</button>
+      <button onclick="scrollToId('features')">Features</button>
+      <button onclick="openTab('pos')">POS System</button>
+      <button onclick="openTab('jobs')">Shop Management</button>
+      <button onclick="openTab('customers')">Customers</button>
+      <button onclick="scrollToId('pricing')">Pricing</button>
+      <button onclick="scrollToId('about')">About</button>
+    </nav>
+    <div class="navactions">
+      <button class="btn-login" onclick="startLogin()">Login</button>
+      <button class="btn-cta" onclick="startSignup()">Get Started</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="wrap herogrid">
+    <div>
+      <div class="eyebrow">Smart shop management. Simplified.</div>
+      <h1 class="display">Run your entire<br>auto shop<br><span class="redline">from one system.</span></h1>
+      <p class="lede">Shop Logik combines POS, shop management, customer communication, vehicle records, inventory, estimates, invoices, reporting, fleet management, and AI tools into one platform.</p>
+      <div class="herobtns">
+        <button class="btn-primary-lg" onclick="startSignup()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C9 6 7 10 7 14a5 5 0 0010 0c0-4-2-8-5-12z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="1.6" fill="#fff"/></svg>Start Your Shop</button>
+        <button class="btn-outline-lg" onclick="openTab('dashboard')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="#fff" stroke-width="1.6"/><path d="M10 8.5l6 3.5-6 3.5v-7z" fill="#fff"/></svg>View Demo</button>
+      </div>
+      <div class="benefits">
+        <div class="benefit"><div class="bic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 3.5v6c0 5-3.4 8.9-8 10.5-4.6-1.6-8-5.5-8-10.5v-6L12 2z" stroke="#e0272c" stroke-width="1.7" stroke-linejoin="round"/></svg></div><div><div class="b1">Secure &amp; reliable</div><div class="b2">Your data is protected</div></div></div>
+        <div class="benefit"><div class="bic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 18a4.5 4.5 0 01-.6-8.96A5.5 5.5 0 0117.2 8.1 4 4 0 0117 16H7z" stroke="#e0272c" stroke-width="1.7" stroke-linejoin="round"/></svg></div><div><div class="b1">Cloud based</div><div class="b2">Access anywhere</div></div></div>
+        <div class="benefit"><div class="bic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 13a8 8 0 0116 0v4a2 2 0 01-2 2h-1v-6h3M4 13v6h1a2 2 0 002-2v-4H4z" stroke="#e0272c" stroke-width="1.7" stroke-linejoin="round"/></svg></div><div><div class="b1">Expert support</div><div class="b2">We're here to help</div></div></div>
+      </div>
+    </div>
+
+    <div class="monitorwrap">
+      <div>
+        <div class="monitor">
+          <div id="appRoot">
+            <div class="msidebar" id="msidebar"></div>
+            <div class="mmain" id="mmain"></div>
+          </div>
+        </div>
+        <div class="mstand"></div>
+        <div class="mbase"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="sectionhead">
+      <div class="eyebrow">Everything in one place</div>
+      <h2 class="display">One system for every part of the shop</h2>
+      <p>Stop juggling separate tools for point of sale, scheduling, and customer records. Shop Logik keeps every part of the business connected.</p>
+    </div>
+    <div class="featgrid">
+      <div class="featcard"><div class="fic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="#e0272c" stroke-width="1.7"/><path d="M3 10h18M7 15h4" stroke="#e0272c" stroke-width="1.7" stroke-linecap="round"/></svg></div><h3>Point of sale</h3><p>Ring up services and parts, apply discounts, and take payment without leaving the shop floor.</p></div>
+      <div class="featcard"><div class="fic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16V11l2-5h12l2 5v5M4 16a1.5 1.5 0 003 0M17 16a1.5 1.5 0 003 0M4 16h16M7 8.5h10" stroke="#e0272c" stroke-width="1.7" stroke-linejoin="round"/></svg></div><h3>Vehicle &amp; job tracking</h3><p>Every vehicle's history, status, and next service in one board your whole team can see.</p></div>
+      <div class="featcard"><div class="fic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="#e0272c" stroke-width="1.7"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#e0272c" stroke-width="1.7" stroke-linecap="round"/></svg></div><h3>Customer records</h3><p>Contact info, vehicle history, estimates, and invoices tied to every customer automatically.</p></div>
+      <div class="featcard"><div class="fic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M20 7l-8-4-8 4v10l8 4 8-4V7z" stroke="#e0272c" stroke-width="1.7" stroke-linejoin="round"/></svg></div><h3>Inventory &amp; restock</h3><p>Track parts on hand, get low-stock alerts, and see what needs reordering before it runs out.</p></div>
+      <div class="featcard"><div class="fic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M10 20V4M16 20v-7" stroke="#e0272c" stroke-width="1.7" stroke-linecap="round"/></svg></div><h3>Reporting</h3><p>Sales, services, inventory, and employee performance — always current, never a spreadsheet.</p></div>
+      <div class="featcard"><div class="fic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3a5 5 0 015 5c0 3-2 4-2 6H9c0-2-2-3-2-6a5 5 0 015-5z" stroke="#e0272c" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.5 20h5" stroke="#e0272c" stroke-width="1.7" stroke-linecap="round"/></svg></div><h3>Logik AI</h3><p>Ask about today's sales, slow-moving parts, or the schedule, and get an answer instantly.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="sectionhead">
+      <div class="eyebrow">Simple pricing</div>
+      <h2 class="display">Pick the plan that fits your shop</h2>
+      <p>Every plan includes core POS and shop management. Upgrade as your shop grows.</p>
+    </div>
+    <div class="pricegrid">
+      <div class="pricecard">
+        <h3>STARTER</h3><div class="price">$99<span>/mo</span></div><div class="pdesc">For single-bay shops getting started.</div>
+        <ul><li>✓ POS &amp; invoicing</li><li>✓ Customer &amp; vehicle records</li><li>✓ Basic inventory</li><li>✓ Email support</li></ul>
+        <button class="btn-outline-lg" style="justify-content:center;" onclick="startSignup()">Choose Starter</button>
+      </div>
+      <div class="pricecard feat">
+        <h3>GROWTH</h3><div class="price">$199<span>/mo</span></div><div class="pdesc">For multi-bay shops running full operations.</div>
+        <ul><li>✓ Everything in Starter</li><li>✓ Jobs board &amp; scheduling</li><li>✓ Estimates &amp; approvals</li><li>✓ Logik AI assistant</li><li>✓ Priority support</li></ul>
+        <button class="btn-primary-lg" style="justify-content:center;" onclick="startSignup()">Choose Growth</button>
+      </div>
+      <div class="pricecard">
+        <h3>PRO</h3><div class="price">$349<span>/mo</span></div><div class="pdesc">For fleet accounts and multi-location shops.</div>
+        <ul><li>✓ Everything in Growth</li><li>✓ Fleet management</li><li>✓ Team performance &amp; commission</li><li>✓ Advanced reporting</li></ul>
+        <button class="btn-outline-lg" style="justify-content:center;" onclick="startSignup()">Choose Pro</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="about">
+  <div class="wrap aboutwrap">
+    <div>
+      <div class="eyebrow">About Shop Logik</div>
+      <h2 class="display" style="margin-bottom:16px;">Built for shops that run on more than paper tickets</h2>
+      <p>Shop Logik is a shop management and point-of-sale platform for independent auto repair businesses. It brings scheduling, customer records, inventory, and reporting into a single system so shop owners can run the business without stitching together spreadsheets and sticky notes.</p>
+      <p>This page is a product prototype — every screen behind the monitor above is a working demo of the interface, built with fictional shop data.</p>
+    </div>
+    <div class="aboutstats">
+      <div class="aboutstat"><div class="v">2,500+</div><div class="l">Shops on the platform</div></div>
+      <div class="aboutstat"><div class="v">1M+</div><div class="l">Vehicles serviced</div></div>
+      <div class="aboutstat"><div class="v">99.9%</div><div class="l">Platform uptime</div></div>
+      <div class="aboutstat"><div class="v">24/7</div><div class="l">Cloud access</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="stats">
+  <div class="wrap">
+    <div class="trusted">Trusted by auto shops across the country</div>
+    <div class="statrow">
+      <div class="statitem"><div class="sic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9l1.5-5h15L21 9M3 9v10a1 1 0 001 1h4a1 1 0 001-1v-4h6v4a1 1 0 001 1h4a1 1 0 001-1V9M3 9h18" stroke="#e0272c" stroke-width="1.7" stroke-linejoin="round"/></svg></div><div><div class="sv">2,500+</div><div class="sl">Shops</div></div></div>
+      <div class="statdiv"></div>
+      <div class="statitem"><div class="sic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="#e0272c" stroke-width="1.7"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 9a2.6 2.6 0 100-5.2M21 20c0-2.6-1.9-4.8-4.5-5.6" stroke="#e0272c" stroke-width="1.7" stroke-linecap="round"/></svg></div><div><div class="sv">25,000+</div><div class="sl">Users</div></div></div>
+      <div class="statdiv"></div>
+      <div class="statitem"><div class="sic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 16V11l2-5h12l2 5v5M4 16a1.5 1.5 0 003 0M17 16a1.5 1.5 0 003 0M4 16h16M7 8.5h10" stroke="#e0272c" stroke-width="1.7" stroke-linejoin="round"/></svg></div><div><div class="sv">1M+</div><div class="sl">Vehicles Serviced</div></div></div>
+      <div class="statdiv"></div>
+      <div class="statitem"><div class="sic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M10 20V4M16 20v-7M4 13l6-5 4 3 6-6" stroke="#e0272c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="sv">$1B+</div><div class="sl">Sales Processed</div></div></div>
+      <div class="statdiv"></div>
+      <div class="statitem"><div class="sic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#e0272c" stroke-width="1.7"/><path d="M12 7v5l3.5 2" stroke="#e0272c" stroke-width="1.7" stroke-linecap="round"/></svg></div><div><div class="sv">99.9%</div><div class="sl">Uptime</div></div></div>
+    </div>
+  </div>
+</section>
+
+<footer>Shop Logik prototype — demo data only. &copy; 2026 Shop Logik.</footer>
+<div id="mtoastEl" style="position:fixed; bottom:22px; right:22px; background:var(--red); color:#fff; font-weight:700; font-size:13px; padding:11px 18px; border-radius:9px; z-index:999; display:none; box-shadow:0 8px 24px rgba(0,0,0,.4);"></div>
+
+<script>
+/* ============================================================
+   FICTIONAL DEMO DATA — no real business, customer, or personal info
+   ============================================================ */
+const SHOP = { name:'Demo Auto Center', address:'482 Industrial Pkwy, Springfield, TX 75001', phone:'(555) 010-2938', owner:'Alex Morgan' };
+
+let customers = [
+  {id:1, name:'Jordan Ellis', phone:'(555) 201-3341', email:'jordan.ellis@example.com'},
+  {id:2, name:'Maria Chen', phone:'(555) 201-3342', email:'maria.chen@example.com'},
+  {id:3, name:'Sam Whitfield', phone:'(555) 201-3343', email:'sam.whitfield@example.com'},
+  {id:4, name:'Taylor Brooks', phone:'(555) 201-3344', email:'taylor.brooks@example.com'},
+  {id:5, name:'Nina Alvarez', phone:'(555) 201-3345', email:'nina.alvarez@example.com'},
+  {id:6, name:'Chris Patel', phone:'(555) 201-3346', email:'chris.patel@example.com'},
+];
+
+let vehicles = [
+  {id:1, ymm:'2019 Toyota Camry', vin:'4T1BF1FK5KU123456', mileage:62400, customerId:1},
+  {id:2, ymm:'2021 Honda CR-V', vin:'2HKRW2H59MH123456', mileage:28150, customerId:2},
+  {id:3, ymm:'2016 Ford Escape', vin:'1FMCU9G94GUA12345', mileage:91020, customerId:2},
+  {id:4, ymm:'2020 Chevrolet Silverado', vin:'3GCUYDED0LG123456', mileage:47860, customerId:3},
+  {id:5, ymm:'2018 Subaru Outback', vin:'4S4BSANC0J3123456', mileage:73310, customerId:4},
+  {id:6, ymm:'2022 Kia Telluride', vin:'5XYP34HC0NG123456', mileage:15780, customerId:5},
+  {id:7, ymm:'2017 Nissan Altima', vin:'1N4AL3AP7HN123456', mileage:88540, customerId:6},
+];
+function custName(id){ const c=customers.find(x=>x.id===id); return c?c.name:'—'; }
+function vehName(id){ const v=vehicles.find(x=>x.id===id); return v?v.ymm:'—'; }
+function custVehicles(cid){ return vehicles.filter(v=>v.customerId===cid); }
+
+let jobs = [
+  {id:'J-2041', customerId:1, vehicleId:1, service:'Oil Change', status:'In Progress'},
+  {id:'J-2042', customerId:2, vehicleId:2, service:'Tire Rotation', status:'Scheduled'},
+  {id:'J-2043', customerId:3, vehicleId:4, service:'Brake Pad Replacement', status:'Waiting for Parts'},
+  {id:'J-2044', customerId:4, vehicleId:5, service:'State Inspection', status:'Ready'},
+  {id:'J-2045', customerId:5, vehicleId:6, service:'Diagnostic', status:'Checked In'},
+  {id:'J-2046', customerId:6, vehicleId:7, service:'Battery Replacement', status:'Completed'},
+];
+const JOB_STATUSES = ['Scheduled','Checked In','In Progress','Waiting for Parts','Ready','Completed'];
+function jobBadge(s){ return {'Scheduled':'b-sched','Checked In':'b-checked','In Progress':'b-progress','Waiting for Parts':'b-waiting','Ready':'b-ready','Completed':'b-done'}[s]||'b-sched'; }
+
+let estimates = [
+  {id:'E-3011', customerId:1, vehicleId:1, items:[{name:'Brake Pad Replacement (Front)', price:189.99}], status:'Draft'},
+  {id:'E-3012', customerId:2, vehicleId:2, items:[{name:'Wheel Alignment', price:89.99},{name:'AC Recharge', price:119.99}], status:'Sent'},
+  {id:'E-3013', customerId:3, vehicleId:4, items:[{name:'Battery Replacement', price:149.99}], status:'Approved'},
+];
+function estTotal(e){ return e.items.reduce((s,i)=>s+i.price,0); }
+
+let nextInvoiceNum = 4105;
+let invoices = [
+  {id:'INV-4101', customerId:1, vehicleId:1, items:[{name:'Oil Change', price:59.99}], status:'Paid', method:'Card'},
+  {id:'INV-4102', customerId:2, vehicleId:3, items:[{name:'Diagnostic Fee', price:99.99},{name:'AC Recharge', price:119.99}], status:'Unpaid', method:'—'},
+  {id:'INV-4103', customerId:4, vehicleId:5, items:[{name:'State Inspection', price:25.00}], status:'Paid', method:'Cash'},
+  {id:'INV-4104', customerId:6, vehicleId:7, items:[{name:'Battery Replacement', price:149.99}], status:'Paid', method:'Digital'},
+];
+function invTotal(inv){ return inv.items.reduce((s,i)=>s+i.price,0); }
+
+let inventory = [
+  {name:'5W-30 Full Synthetic Oil', sku:'OIL-5W30', category:'Fluids', qty:18, min:20, price:42.00},
+  {name:'Oil Filter PH10060', sku:'FLT-PH10060', category:'Filters', qty:4, min:15, price:9.00},
+  {name:'Air Filter A1552', sku:'FLT-A1552', category:'Filters', qty:22, min:10, price:18.00},
+  {name:'Cabin Air Filter CF1057', sku:'FLT-CF1057', category:'Filters', qty:6, min:10, price:22.00},
+  {name:'Fuel Filter FF204', sku:'FLT-FF204', category:'Filters', qty:3, min:8, price:26.00},
+  {name:'Brake Pads (Front)', sku:'BRK-FR100', category:'Brakes', qty:9, min:8, price:68.00},
+  {name:'Wiper Blades 24"', sku:'ACC-WB24', category:'Accessories', qty:14, min:10, price:15.00},
+  {name:'ATF Transmission Fluid', sku:'FLD-ATF1', category:'Fluids', qty:0, min:6, price:34.00},
+];
+
+let fleet = [
+  {company:'Metro Delivery Co', vehicleCount:6, nextMaint:'Jun 14, 2026', invoiceTotal:4820, status:'Active'},
+  {company:'Sunrise Logistics', vehicleCount:4, nextMaint:'Jun 22, 2026', invoiceTotal:3150, status:'Active'},
+];
+
+let team = [
+  {name:'Alex Morgan', role:'Shop Manager', sales:18420, commission:4},
+  {name:'Priya Nair', role:'Service Advisor', sales:12650, commission:6},
+  {name:'Marcus Webb', role:'Technician', sales:9340, commission:8},
+  {name:'Devon Ruiz', role:'Technician', sales:8760, commission:8},
+  {name:'Lena Ostrowski', role:'Technician', sales:7980, commission:8},
+];
+
+let events = [
+  {day:'Mon', time:'9:00 AM', customerId:1, vehicleId:1, service:'Oil Change'},
+  {day:'Mon', time:'11:00 AM', customerId:2, vehicleId:2, service:'Tire Rotation'},
+  {day:'Tue', time:'10:00 AM', customerId:3, vehicleId:4, service:'Brake Pad Replacement'},
+  {day:'Wed', time:'9:30 AM', customerId:4, vehicleId:5, service:'State Inspection'},
+  {day:'Wed', time:'1:00 PM', customerId:5, vehicleId:6, service:'Diagnostic'},
+  {day:'Thu', time:'2:00 PM', customerId:6, vehicleId:7, service:'Battery Replacement'},
+  {day:'Fri', time:'10:30 AM', customerId:1, vehicleId:1, service:'Follow-up Check'},
+];
+const WEEKDAYS = ['Mon','Tue','Wed','Thu','Fri'];
+
+const SERVICES = [
+  {name:'Oil Change', price:59.99}, {name:'Tire Rotation', price:29.99}, {name:'Brake Pad Replacement (Front)', price:189.99},
+  {name:'State Inspection', price:25.00}, {name:'Battery Replacement', price:149.99}, {name:'AC Recharge', price:119.99},
+  {name:'Wheel Alignment', price:89.99}, {name:'Diagnostic Fee', price:99.99},
+];
+
+/* ---- Financial health targets (demo defaults — configurable later in Settings) ---- */
+let TARGETS = { laborTarget:20, laborWarning:25, laborCritical:30 };
+let laborState = { totalLabor: 1730 }; // accumulated labor cost today, demo starting value
+
+function netSales(){ return invoices.reduce((s,i)=>s+invTotal(i),0); }
+function laborPercent(){ const ns = netSales(); return ns>0 ? (laborState.totalLabor/ns*100) : 0; }
+function healthLevel(pct, t){
+  if(pct <= t.laborTarget) return 'green';
+  if(pct <= t.laborWarning) return 'yellow';
+  if(pct <= t.laborCritical) return 'orange';
+  return 'red';
+}
+function healthLabel(level){ return {green:'Healthy', yellow:'Watch', orange:'Attention', red:'Critical'}[level]; }
+
+let activity = [
+  {ic:'💳', tx:'Invoice #4104 paid — Chris Patel', tm:'12m ago'},
+  {ic:'📋', tx:'Job J-2041 moved to In Progress', tm:'28m ago'},
+  {ic:'📝', tx:'Estimate E-3012 sent to Maria Chen', tm:'1h ago'},
+  {ic:'👤', tx:'New customer added — Nina Alvarez', tm:'2h ago'},
+  {ic:'📦', tx:'Air Filter A1552 restocked', tm:'3h ago'},
+];
+function logActivity(icon,text){ activity.unshift({ic:icon, tx:text, tm:'just now'}); activity=activity.slice(0,6); }
+
+/* ============================================================
+   APP SHELL / NAV
+   ============================================================ */
+const NAV = [
+  ['dashboard','Dashboard'], ['pos','POS'], ['jobs','Jobs'], ['customers','Customers'], ['vehicles','Vehicles'],
+  ['estimates','Estimates'], ['invoices','Invoices'], ['inventory','Inventory'], ['fleet','Fleet'], ['team','Team'],
+  ['calendar','Calendar'], ['reports','Reports'], ['migration','Data Migration'], ['integrations','Integrations'], ['ai','Logik AI'], ['settings','Settings'],
+];
+let currentTab = 'dashboard';
+let tabHistory = [];
+let darkMode = true;
+let authStep = 0; // 0 = not in auth flow, 1-3 = signup steps, 'login' = login screen
+let authData = { name:'', email:'', password:'', shopName:'', shopPhone:'', shopEmail:'', address:'', shopType:'Independent Repair Shop' };
+function startSignup(){ authStep = 1; renderApp(); scrollToId('top'); }
+function startLogin(){ authStep = 'login'; renderApp(); scrollToId('top'); }
+function cancelAuth(){ authStep = 0; renderApp(); }
+
+function scrollToId(id){ document.getElementById(id).scrollIntoView({behavior:'smooth'}); }
+function openTab(tab){ if(tab===currentTab) return; tabHistory.push(currentTab); currentTab=tab; renderApp(); scrollToId('top'); }
+
+/* ---- Keyboard navigation: arrow keys move sidebar focus, Esc / Esc-Esc goes back ---- */
+document.addEventListener('keydown', (e)=>{
+  const tag = (e.target.tagName||'').toLowerCase();
+  const typing = tag==='input' || tag==='select' || tag==='textarea';
+  if(typing) return; // never hijack typing
+  const idx = NAV.findIndex(n=>n[0]===currentTab);
+  if(document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('mnavitem')){
+    if(e.key==='ArrowDown' || e.key==='ArrowRight'){ e.preventDefault(); const next = NAV[(idx+1)%NAV.length][0]; openTab(next); focusNavItem(next); }
+    if(e.key==='ArrowUp' || e.key==='ArrowLeft'){ e.preventDefault(); const prev = NAV[(idx-1+NAV.length)%NAV.length][0]; openTab(prev); focusNavItem(prev); }
+  }
+  if(e.key==='Escape'){
+    if(expandedCustomerId!==null){ expandedCustomerId=null; renderApp(); return; } // first Esc: close open panel
+    if(tabHistory.length){ currentTab = tabHistory.pop(); renderApp(); scrollToId('top'); } // second Esc: go back
+  }
+});
+function focusNavItem(key){ setTimeout(()=>{ const items=[...document.querySelectorAll('.mnavitem')]; const i=NAV.findIndex(n=>n[0]===key); if(items[i]) items[i].focus(); }, 0); }
+function mtoast(msg){ const t=document.getElementById('mtoastEl'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 2200); }
+
+function renderSidebar(){
+  const sb = document.getElementById('msidebar');
+  if(authStep>0){ sb.style.display='none'; return; }
+  sb.style.display='';
+  sb.innerHTML =
+    `<div class="mlogo">SHOP<span>LOGIK</span></div>` +
+    NAV.map(([key,label])=>`<button class="mnavitem ${currentTab===key?'active':''}" onclick="openTab('${key}')"><span class="dot"></span><span class="lbl">${label}</span></button>`).join('');
+}
+
+function renderApp(){
+  renderSidebar();
+  const el = document.getElementById('mmain');
+  if(authStep>0){ el.innerHTML = pageAuth(); return; }
+  const pages = {
+    dashboard: pageDashboard, pos: pagePOS, jobs: pageJobs, customers: pageCustomers, vehicles: pageVehicles,
+    estimates: pageEstimates, invoices: pageInvoices, inventory: pageInventory, fleet: pageFleet, team: pageTeam,
+    calendar: pageCalendar, reports: pageReports, migration: pageMigration, integrations: pageIntegrations, ai: pageAI, settings: pageSettings,
+  };
+  el.innerHTML = (pages[currentTab]||pageDashboard)();
+  if(currentTab==='reports') drawReportChart();
+}
+
+/* ============================================================
+   PAGES
+   ============================================================ */
+const DAYPARTS = [
+  {label:'10:00 AM', laborAdd:0, salesMultiplier:1},
+  {label:'2:00 PM', laborAdd:420, salesMultiplier:1},
+  {label:'5:00 PM', laborAdd:560, salesMultiplier:1},
+  {label:'Closing', laborAdd:640, salesMultiplier:1},
+];
+let dayPartIdx = 0;
+function simulateNext(){
+  dayPartIdx = (dayPartIdx+1) % DAYPARTS.length;
+  laborState.totalLabor = 1730 + DAYPARTS.slice(1, dayPartIdx+1).reduce((s,d)=>s+d.laborAdd,0);
+  logActivity('⏱️', `Time advanced to ${DAYPARTS[dayPartIdx].label} — labor now ${laborPercent().toFixed(1)}%`);
+  renderApp();
+}
+
+function pageDashboard(){
+  const openJobs = jobs.filter(j=>j.status!=='Completed').length;
+  const waiting = jobs.filter(j=>j.status==='Waiting for Parts').length;
+  const ns = netSales();
+  const carCount = invoices.length + 62; // demo baseline + live invoices
+  const avgTicket = ns / carCount;
+  const laborPct = laborPercent();
+  const level = healthLevel(laborPct, TARGETS);
+  return `
+  <div class="mtop"><div class="mh">Dashboard</div><div class="mmeta"><span>${DAYPARTS[dayPartIdx].label} &middot; May 10, 2026</span><span>${SHOP.name}</span></div></div>
+  <div class="mwelcome">Welcome back, <b>${SHOP.owner}</b> — here's what's happening with your shop today. <button class="mbtn-ghost mbtn-sm" onclick="simulateNext()">Simulate next update ▸</button></div>
+  <div class="mkpis">
+    <div class="mkpi"><div class="l">Today's Sales</div><div class="v">$${ns.toFixed(2)}</div><div class="d">${invoices.length} invoices today</div></div>
+    <div class="mkpi"><div class="l">Car Count</div><div class="v">${carCount}</div><div class="d">+8.1% vs yesterday</div></div>
+    <div class="mkpi"><div class="l">Avg Ticket</div><div class="v">$${avgTicket.toFixed(2)}</div><div class="d">updates per sale</div></div>
+    <div class="mkpi health-${level}"><div class="l">Labor % <span class="health-dot health-${level}"></span></div><div class="v health-${level}">${laborPct.toFixed(1)}%</div><div class="d">${healthLabel(level)} &middot; target ${TARGETS.laborTarget}%</div></div>
+  </div>
+  <div class="mrow2">
+    <div class="mcard"><div class="ch"><span>Sales Overview</span><span>This Week</span></div>
+      <svg viewBox="0 0 280 70" preserveAspectRatio="none" style="width:100%; height:70px;"><polyline points="4,55 44,46 84,22 124,35 164,26 204,10 240,18 276,6" fill="none" stroke="#e0272c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="mcard"><div class="ch"><span>Payment Breakdown</span></div>
+      <div class="mdonut"><div class="hole">$${ns.toFixed(0)}<br>Total</div></div>
+      <div class="mlegend"><div><span class="sw" style="background:var(--red)"></span>Credit Card 48.7%</div><div><span class="sw" style="background:var(--blue)"></span>Fleet 18.9%</div><div><span class="sw" style="background:var(--green)"></span>Cash 24.6%</div></div>
+    </div>
+  </div>
+  <div class="mrow2">
+    <div class="mcard"><div class="ch">Cost &amp; Profit</div>
+      <div class="li"><span>Labor Cost</span><b class="health-${level}">$${laborState.totalLabor.toFixed(2)}</b></div>
+      <div class="barrow"><div class="top"><span>Labor % of Net Sales</span><span class="health-${level}">${laborPct.toFixed(1)}%</span></div>
+        <div class="track"><div class="fill" style="width:${Math.min(laborPct/TARGETS.laborCritical*100,100)}%; background:var(--health-${level})"></div></div></div>
+      <div class="li" style="margin-top:6px;"><span>Gross Profit (est.)</span><b>$${(ns*0.42).toFixed(2)}</b></div>
+    </div>
+    <div class="mcard"><div class="ch">Low Inventory</div><div class="mlist">${inventory.filter(i=>i.qty<=i.min).slice(0,4).map(i=>`<div class="li"><span>${i.name}</span><b class="warn">${i.qty}</b></div>`).join('') || '<div class="memptynote">Nothing low.</div>'}</div></div>
+  </div>
+  <div class="m3col">
+    <div class="mcard"><div class="ch">Top Services</div><div class="mlist"><div class="li"><span>Oil Change</span><b>$2,854</b></div><div class="li"><span>State Inspection</span><b>$1,250</b></div><div class="li"><span>Tire Rotation</span><b>$864</b></div></div></div>
+    <div class="mcard"><div class="ch">Active Jobs</div><div class="mlist"><div class="li"><span>Open jobs</span><b>${openJobs}</b></div><div class="li"><span>Waiting on parts</span><b class="warn">${waiting}</b></div></div></div>
+    <div class="mcard"><div class="ch">Recent Activity</div><div class="mlist">${activity.slice(0,3).map(a=>`<div class="li"><span>${a.tx}</span><b>${a.tm}</b></div>`).join('')}</div></div>
+  </div>`;
+}
+
+/* ---------------- POS ---------------- */
+let posCustomerId = null, posVehicleId = null, posCart = [], posDiscount = 0, posMethod = null;
+let posSearch = '', posSplit = false, posPayments = [];
+function pagePOS(){
+  const searchResults = posSearch.trim() ? customers.filter(c=>{
+    const q = posSearch.toLowerCase();
+    const vehMatch = custVehicles(c.id).some(v=>v.vin.toLowerCase().includes(q) || v.ymm.toLowerCase().includes(q));
+    return c.name.toLowerCase().includes(q) || c.phone.replace(/\D/g,'').includes(q.replace(/\D/g,'')) || vehMatch;
+  }) : [];
+  const selectedCustomer = customers.find(c=>c.id==posCustomerId);
+  const vehList = posCustomerId ? custVehicles(Number(posCustomerId)) : [];
+  const subtotal = posCart.reduce((s,i)=>s+i.price,0);
+  const discAmt = subtotal * (posDiscount/100);
+  const tax = (subtotal-discAmt) * 0.0825;
+  const total = subtotal - discAmt + tax;
+  const splitSum = posPayments.reduce((s,p)=>s+(Number(p.amount)||0),0);
+  return `
+  <div class="mtop"><div class="mh">Point of Sale</div></div>
+  <div class="mgrid2">
+    <div>
+      <div class="mcard" style="margin-bottom:10px;">
+        <div class="ch">Find Customer</div>
+        <div class="mfield"><input class="minput" placeholder="Search by name, phone, or VIN..." value="${escapeHtml(posSearch)}" oninput="posSearch=this.value; renderApp();"></div>
+        ${posSearch.trim() ? (searchResults.length ? `<div class="mflex">${searchResults.map(c=>`<button class="mbtn-ghost mbtn-sm" onclick="posCustomerId='${c.id}'; posVehicleId=null; posSearch=''; renderApp();">${c.name} — ${c.phone}</button>`).join('')}</div>` : '<div class="memptynote">No matches.</div>') : ''}
+        ${selectedCustomer ? `
+          <div class="li" style="margin-top:10px;"><span>Customer</span><b>${selectedCustomer.name} <a style="color:var(--m-text3); cursor:pointer; margin-left:6px;" onclick="posCustomerId=null; posVehicleId=null; renderApp();">change</a></b></div>
+          <div class="ch" style="margin-top:10px;">Select Vehicle</div>
+          <div class="mflex">${vehList.map(v=>`<button class="${posVehicleId==v.id?'mbtn':'mbtn-ghost'} mbtn-sm" onclick="posVehicleId='${v.id}'; renderApp();">${v.ymm} — ${v.vin.slice(-6)}</button>`).join('') || '<span class="memptynote">No vehicles on file.</span>'}</div>
+        `: '<div class="memptynote">Search and select a customer to begin.</div>'}
+      </div>
+      <div class="mcard">
+        <div class="ch">Add Services</div>
+        <div class="mflex">${SERVICES.map(s=>`<button class="mbtn-ghost mbtn-sm" onclick='posAdd(${JSON.stringify(s.name)},${s.price})'>${s.name} — $${s.price.toFixed(2)}</button>`).join('')}</div>
+        <div class="ch" style="margin-top:12px;">Add Parts</div>
+        <div class="mflex">${inventory.filter(i=>i.qty>0).map(i=>`<button class="mbtn-ghost mbtn-sm" onclick='posAddPart(${JSON.stringify(i.name)})'>${i.name} — $${i.price.toFixed(2)}</button>`).join('')}</div>
+      </div>
+    </div>
+    <div class="mcard">
+      <div class="ch">Cart</div>
+      ${posCart.length? posCart.map((it,idx)=>`<div class="li" style="margin-bottom:5px;"><span>${it.name}</span><b>$${it.price.toFixed(2)} <a style="color:var(--m-text3); cursor:pointer; margin-left:6px;" onclick="posRemove(${idx})">✕</a></b></div>`).join('') : '<div class="memptynote">Cart is empty — add a service or part.</div>'}
+      <div class="mfield" style="margin-top:10px;"><label>Discount %</label><input class="minput" type="number" min="0" max="100" value="${posDiscount}" onchange="posDiscount=Number(this.value)||0; renderApp();"></div>
+      <div class="li"><span>Subtotal</span><b>$${subtotal.toFixed(2)}</b></div>
+      <div class="li"><span>Discount</span><b>-$${discAmt.toFixed(2)}</b></div>
+      <div class="li"><span>Tax (8.25%)</span><b>$${tax.toFixed(2)}</b></div>
+      <div class="li" style="font-size:13px; margin-top:4px;"><span><b>Total</b></span><b>$${total.toFixed(2)}</b></div>
+      <div class="mflex" style="justify-content:space-between; margin-top:12px;">
+        <div class="ch" style="margin:0;">Payment</div>
+        <label style="display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--m-text3);"><input type="checkbox" ${posSplit?'checked':''} onchange="posSplit=this.checked; posPayments=posSplit?[{method:'Cash',amount:0}]:[]; posMethod=null; renderApp();"> Split payment</label>
+      </div>
+      ${!posSplit ? `
+        <div class="mflex">${['Cash','Credit','Debit','Fleet','Check','Gift Card'].map(m=>`<button class="${posMethod===m?'mbtn':'mbtn-ghost'} mbtn-sm" onclick="posMethod='${m}'; renderApp();">${m}</button>`).join('')}</div>
+      ` : `
+        ${posPayments.map((p,idx)=>`
+          <div class="mflex" style="margin-bottom:6px;">
+            <select class="mselect" style="width:auto;" onchange="posPayments[${idx}].method=this.value;">${['Cash','Credit','Debit','Fleet','Check','Gift Card'].map(m=>`<option ${p.method===m?'selected':''}>${m}</option>`).join('')}</select>
+            <input class="minput" style="width:90px;" type="number" placeholder="Amount" value="${p.amount||''}" oninput="posPayments[${idx}].amount=this.value; renderApp();">
+            <a style="color:var(--m-text3); cursor:pointer;" onclick="posPayments.splice(${idx},1); renderApp();">✕</a>
+          </div>`).join('')}
+        <button class="mbtn-ghost mbtn-sm" onclick="posPayments.push({method:'Cash',amount:0}); renderApp();">+ Add payment line</button>
+        <div class="li" style="margin-top:8px;"><span>Split total</span><b class="${Math.abs(splitSum-total)<0.01?'pos':'warn'}">$${splitSum.toFixed(2)} / $${total.toFixed(2)}</b></div>
+      `}
+      <button class="mbtn" style="width:100%; margin-top:12px;" onclick="posComplete()">Complete Sale</button>
+    </div>
+  </div>`;
+}
+function posAdd(name, price){ posCart.push({name, price}); renderApp(); }
+function posAddPart(name){ const item = inventory.find(i=>i.name===name); if(!item) return; posCart.push({name:item.name, price:item.price, isPart:true}); renderApp(); }
+function posRemove(idx){ posCart.splice(idx,1); renderApp(); }
+function posComplete(){
+  if(!posCustomerId || !posVehicleId){ mtoast('Select a customer and vehicle first'); return; }
+  if(!posCart.length){ mtoast('Cart is empty'); return; }
+  const subtotal = posCart.reduce((s,i)=>s+i.price,0);
+  const discAmt = subtotal * (posDiscount/100);
+  const tax = (subtotal-discAmt) * 0.0825;
+  const total = subtotal - discAmt + tax;
+  let paymentSummary;
+  if(posSplit){
+    const sum = posPayments.reduce((s,p)=>s+(Number(p.amount)||0),0);
+    if(Math.abs(sum-total)>0.01){ mtoast('Split payments must add up to the total'); return; }
+    paymentSummary = posPayments.map(p=>`${p.method} $${Number(p.amount).toFixed(2)}`).join(' + ');
+  } else {
+    if(!posMethod){ mtoast('Choose a payment method'); return; }
+    paymentSummary = posMethod;
+  }
+  posCart.forEach(it=>{ if(it.isPart){ const inv = inventory.find(i=>i.name===it.name); if(inv && inv.qty>0) inv.qty -= 1; } });
+  const id = 'INV-'+(nextInvoiceNum++);
+  invoices.unshift({id, customerId:Number(posCustomerId), vehicleId:Number(posVehicleId), items:posCart.slice(), status:'Paid', method:paymentSummary});
+  const laborAdd = posCart.filter(i=>!i.isPart).reduce((s,i)=>s+i.price,0) * 0.35;
+  laborState.totalLabor += laborAdd;
+  logActivity('💳', `${id} paid — ${custName(Number(posCustomerId))}`);
+  mtoast(`Sale complete — ${id} created`);
+  posCart=[]; posDiscount=0; posMethod=null; posSplit=false; posPayments=[]; posCustomerId=null; posVehicleId=null;
+  renderApp();
+}
+
+/* ---------------- JOBS ---------------- */
+function pageJobs(){
+  return `
+  <div class="mtop"><div class="mh">Jobs</div></div>
+  <div class="mcard">
+    <table class="mtable"><thead><tr><th>Job #</th><th>Vehicle</th><th>Customer</th><th>Service</th><th>Status</th></tr></thead>
+    <tbody>${jobs.map(j=>`<tr><td><b>${j.id}</b></td><td>${vehName(j.vehicleId)}</td><td>${custName(j.customerId)}</td><td>${j.service}</td>
+      <td><select class="mselect" style="width:auto; padding:5px 8px; font-size:10.5px;" onchange="jobSetStatus('${j.id}',this.value)">${JOB_STATUSES.map(s=>`<option ${s===j.status?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>
+  </div>`;
+}
+function jobSetStatus(id, status){ const j=jobs.find(x=>x.id===id); if(j){ j.status=status; logActivity('📋', `${id} moved to ${status}`); mtoast(`${id} updated`); renderApp(); } }
+
+/* ---------------- CUSTOMERS ---------------- */
+let custSearch = '';
+let expandedCustomerId = null;
+const COMM_TIMELINE = {
+  1:[['📞','Phone call — asked about oil change price','3d ago'],['📱','SMS sent — appointment reminder','2d ago'],['🧾','Invoice INV-4101 paid','1d ago']],
+  2:[['📧','Email sent — estimate E-3012','2d ago'],['📱','SMS received — "Can I reschedule to Friday?"','1d ago']],
+  3:[['📄','Estimate E-3013 approved','5h ago'],['📞','Phone call — parts availability','3h ago']],
+  4:[['🧾','Invoice INV-4103 paid','1d ago']],
+  5:[['🔧','Job J-2045 checked in','2h ago']],
+  6:[['🧾','Invoice INV-4104 paid','12m ago'],['📱','SMS sent — vehicle ready notification','10m ago']],
+};
+function pageCustomers(){
+  const filtered = customers.filter(c=>c.name.toLowerCase().includes(custSearch.toLowerCase()));
+  return `
+  <div class="mtop"><div class="mh">Customers</div><button class="mbtn" onclick="mtoast('Add customer form — demo only')">+ Add Customer</button></div>
+  <div class="mfield msearch"><input class="minput" placeholder="Search customers..." value="${escapeHtml(custSearch)}" oninput="custSearch=this.value; renderApp();"></div>
+  <div class="mcard">
+    <table class="mtable"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Vehicles</th><th></th></tr></thead>
+    <tbody>${filtered.map(c=>`
+      <tr><td><b>${c.name}</b></td><td>${c.phone}</td><td>${c.email}</td><td>${custVehicles(c.id).length}</td>
+      <td><button class="mbtn-ghost mbtn-sm" onclick="expandedCustomerId = expandedCustomerId===${c.id}?null:${c.id}; renderApp();">${expandedCustomerId===c.id?'Hide':'History'}</button></td></tr>
+      ${expandedCustomerId===c.id?`<tr><td colspan="5"><div class="mcard" style="margin:4px 0 8px; background:var(--m-card2);"><div class="ch">Communication Timeline — ${c.name}</div>
+        ${(COMM_TIMELINE[c.id]||[]).map(([ic,tx,tm])=>`<div class="li" style="margin-bottom:5px;"><span>${ic} ${tx}</span><b>${tm}</b></div>`).join('') || '<div class="memptynote">No communication history yet.</div>'}
+      </div></td></tr>`:''}
+    `).join('') || `<tr><td colspan="5" class="memptynote">No customers match "${escapeHtml(custSearch)}"</td></tr>`}</tbody></table>
+  </div>`;
+}
+
+/* ---------------- VEHICLES ---------------- */
+function pageVehicles(){
+  return `
+  <div class="mtop"><div class="mh">Vehicles</div><button class="mbtn" onclick="mtoast('Add vehicle — VIN decode demo only')">+ Add Vehicle</button></div>
+  <div class="mcard">
+    <table class="mtable"><thead><tr><th>Year / Make / Model</th><th>Owner</th><th>VIN</th><th>Mileage</th></tr></thead>
+    <tbody>${vehicles.map(v=>`<tr><td><b>${v.ymm}</b></td><td>${custName(v.customerId)}</td><td>${v.vin}</td><td>${v.mileage.toLocaleString()}</td></tr>`).join('')}</tbody></table>
+  </div>`;
+}
+
+/* ---------------- ESTIMATES ---------------- */
+function pageEstimates(){
+  return `
+  <div class="mtop"><div class="mh">Estimates</div><button class="mbtn" onclick="mtoast('New estimate form — demo only')">+ New Estimate</button></div>
+  <div class="mcard">
+    <table class="mtable"><thead><tr><th>Estimate #</th><th>Customer</th><th>Vehicle</th><th>Items</th><th>Total</th><th>Status</th><th></th></tr></thead>
+    <tbody>${estimates.map(e=>`<tr><td><b>${e.id}</b></td><td>${custName(e.customerId)}</td><td>${vehName(e.vehicleId)}</td><td>${e.items.map(i=>i.name).join(', ')}</td><td>$${estTotal(e).toFixed(2)}</td>
+      <td><span class="mbadge b-${e.status.toLowerCase()}">${e.status}</span></td>
+      <td>${e.status==='Approved'?`<button class="mbtn-ghost mbtn-sm" onclick="estToInvoice('${e.id}')">Convert to Invoice</button>`:''}</td></tr>`).join('')}</tbody></table>
+  </div>`;
+}
+function estToInvoice(id){
+  const e = estimates.find(x=>x.id===id); if(!e) return;
+  const inv = 'INV-'+(nextInvoiceNum++);
+  invoices.unshift({id:inv, customerId:e.customerId, vehicleId:e.vehicleId, items:e.items.slice(), status:'Unpaid', method:'—'});
+  logActivity('📝', `${id} converted to ${inv}`);
+  mtoast(`${id} converted to ${inv}`);
+  renderApp();
+}
+
+/* ---------------- INVOICES ---------------- */
+let invSearch = '';
+function pageInvoices(){
+  const filtered = invoices.filter(i=>custName(i.customerId).toLowerCase().includes(invSearch.toLowerCase()) || i.id.toLowerCase().includes(invSearch.toLowerCase()));
+  return `
+  <div class="mtop"><div class="mh">Invoices</div></div>
+  <div class="mfield msearch"><input class="minput" placeholder="Search invoices or customer..." value="${escapeHtml(invSearch)}" oninput="invSearch=this.value; renderApp();"></div>
+  <div class="mcard">
+    <table class="mtable"><thead><tr><th>Invoice #</th><th>Customer</th><th>Vehicle</th><th>Total</th><th>Status</th><th></th></tr></thead>
+    <tbody>${filtered.map(i=>`<tr><td><b>${i.id}</b></td><td>${custName(i.customerId)}</td><td>${vehName(i.vehicleId)}</td><td>$${invTotal(i).toFixed(2)}</td>
+      <td><span class="mbadge b-${i.status.toLowerCase()}">${i.status}</span></td>
+      <td class="mflex"><button class="mbtn-ghost mbtn-sm" onclick="mtoast('Print preview — demo only')">Print</button><button class="mbtn-ghost mbtn-sm" onclick="mtoast('Email sent (demo)')">Email</button><button class="mbtn-ghost mbtn-sm" onclick="mtoast('Text sent (demo)')">Text</button></td></tr>`).join('') || `<tr><td colspan="6" class="memptynote">No invoices match "${escapeHtml(invSearch)}"</td></tr>`}</tbody></table>
+  </div>`;
+}
+
+/* ---------------- INVENTORY ---------------- */
+function pageInventory(){
+  const low = inventory.filter(i=>i.qty<=i.min);
+  return `
+  <div class="mtop"><div class="mh">Inventory</div><button class="mbtn" onclick="mtoast('Add inventory item — demo only')">+ Add Item</button></div>
+  <div class="mrow2">
+    <div class="mcard">
+      <div class="ch">All Items</div>
+      <table class="mtable"><thead><tr><th>Item</th><th>SKU</th><th>Category</th><th>Qty</th><th>Price</th><th></th></tr></thead>
+      <tbody>${inventory.map((i,idx)=>`<tr><td><b>${i.name}</b></td><td>${i.sku}</td><td>${i.category}</td><td class="${i.qty<=i.min?'warn':''}">${i.qty}</td><td>$${i.price.toFixed(2)}</td><td><button class="mbtn-ghost mbtn-sm" onclick="restock(${idx})">Restock +20</button></td></tr>`).join('')}</tbody></table>
+    </div>
+    <div class="mcard">
+      <div class="ch">Restock List</div>
+      ${low.length? low.map(i=>`<div class="li"><span>${i.name}</span><b class="warn">${i.qty} / ${i.min} min</b></div>`).join('') : '<div class="memptynote">Nothing below minimum stock.</div>'}
+    </div>
+  </div>`;
+}
+function restock(idx){ inventory[idx].qty += 20; logActivity('📦', `${inventory[idx].name} restocked`); mtoast('Restocked'); renderApp(); }
+
+/* ---------------- FLEET ---------------- */
+function pageFleet(){
+  return `
+  <div class="mtop"><div class="mh">Fleet Accounts</div></div>
+  <div class="mcard">
+    <table class="mtable"><thead><tr><th>Company</th><th>Vehicles</th><th>Next Maintenance</th><th>Invoiced YTD</th><th>Status</th></tr></thead>
+    <tbody>${fleet.map(f=>`<tr><td><b>${f.company}</b></td><td>${f.vehicleCount}</td><td>${f.nextMaint}</td><td>$${f.invoiceTotal.toLocaleString()}</td><td><span class="mbadge b-done">${f.status}</span></td></tr>`).join('')}</tbody></table>
+  </div>`;
+}
+
+/* ---------------- TEAM ---------------- */
+function pageTeam(){
+  return `
+  <div class="mtop"><div class="mh">Team</div></div>
+  <div class="mcard">
+    <table class="mtable"><thead><tr><th>Name</th><th>Role</th><th>Sales (MTD)</th><th>Commission</th></tr></thead>
+    <tbody>${team.map(t=>`<tr><td><b>${t.name}</b></td><td>${t.role}</td><td>$${t.sales.toLocaleString()}</td><td>${t.commission}%</td></tr>`).join('')}</tbody></table>
+  </div>`;
+}
+
+/* ---------------- CALENDAR ---------------- */
+let calView = 'week';
+function pageCalendar(){
+  let body;
+  if(calView==='week'){
+    body = `<div class="mcal">${WEEKDAYS.map(d=>`<div class="day"><h4>${d}</h4>${events.filter(e=>e.day===d).map(e=>`<div class="ev"><b>${e.time}</b>${custName(e.customerId)} — ${e.service}</div>`).join('') || '<div class="memptynote" style="padding:0;">No jobs</div>'}</div>`).join('')}</div>`;
+  } else if(calView==='day'){
+    const d = WEEKDAYS[0];
+    body = `<div class="mcard"><div class="ch">${d}</div>${events.filter(e=>e.day===d).map(e=>`<div class="ev" style="margin-bottom:8px;"><b>${e.time}</b>${custName(e.customerId)} — ${vehName(e.vehicleId)} — ${e.service}</div>`).join('')}</div>`;
+  } else {
+    body = `<div class="mmonth">${Array.from({length:28}).map((_,i)=>{ const hasEv = i%4===2; return `<div class="cell">${i+1}${hasEv?'<span class="dotev"></span>':''}</div>`; }).join('')}</div>`;
+  }
+  return `
+  <div class="mtop"><div class="mh">Calendar</div>
+    <div class="mtoggle"><button class="${calView==='day'?'active':''}" onclick="calView='day'; renderApp();">Day</button><button class="${calView==='week'?'active':''}" onclick="calView='week'; renderApp();">Week</button><button class="${calView==='month'?'active':''}" onclick="calView='month'; renderApp();">Month</button></div>
+  </div>${body}`;
+}
+
+/* ---------------- REPORTS ---------------- */
+let reportTab = 'sales';
+const REPORT_TABS = [['sales','Sales'],['services','Services'],['financials','Financials'],['inventory','Inventory'],['customers','Customers'],['vehicles','Vehicles'],['employees','Employees'],['payments','Payments']];
+function pageReports(){
+  let body='';
+  if(reportTab==='sales'){
+    body = `<div class="mcard"><div class="ch">Monthly Sales</div><canvas id="repChart" width="560" height="140" style="width:100%; height:140px;"></canvas></div>`;
+  } else if(reportTab==='services'){
+    body = `<div class="mcard"><div class="ch">Revenue by Service</div>${[['Oil Change',8420,90],['Brakes',6350,72],['Tires',5180,58],['Alignments',3250,38],['Diagnostics',2980,34]].map(([n,v,p])=>`<div class="barrow"><div class="top"><span>${n}</span><span>$${v.toLocaleString()}</span></div><div class="track"><div class="fill" style="width:${p}%"></div></div></div>`).join('')}</div>`;
+  } else if(reportTab==='financials'){
+    const ns = netSales(); const laborPct = laborPercent(); const level = healthLevel(laborPct, TARGETS);
+    const cogs = ns*0.28, grossProfit = ns - cogs - laborState.totalLabor, expenses = ns*0.09, netProfit = grossProfit - expenses;
+    body = `<div class="mrow2">
+      <div class="mcard"><div class="ch">Labor</div>
+        <div class="li"><span>Labor Cost</span><b class="health-${level}">$${laborState.totalLabor.toFixed(2)}</b></div>
+        <div class="li"><span>Labor %</span><span class="healthbadge health-${level}"><span class="health-dot health-${level}"></span>${laborPct.toFixed(1)}% — ${healthLabel(level)}</span></div>
+        <div class="li" style="margin-top:4px; color:var(--m-text3); font-size:9.5px;">Target ${TARGETS.laborTarget}% &middot; Warning ${TARGETS.laborWarning}% &middot; Critical ${TARGETS.laborCritical}%</div>
+      </div>
+      <div class="mcard"><div class="ch">Cost of Goods Sold</div><div class="v" style="font-size:18px; font-weight:800;">$${cogs.toFixed(2)}</div><div class="d" style="color:var(--m-text3); font-size:10px;">Estimated 28% of net sales (demo)</div></div>
+    </div>
+    <div class="mrow2">
+      <div class="mcard"><div class="ch">Gross Profit</div><div class="v" style="font-size:18px; font-weight:800;">$${grossProfit.toFixed(2)}</div></div>
+      <div class="mcard"><div class="ch">Expenses</div><div class="v" style="font-size:18px; font-weight:800;">$${expenses.toFixed(2)}</div><div class="d" style="color:var(--m-text3); font-size:10px;">Estimated 9% of net sales (demo)</div></div>
+    </div>
+    <div class="mcard"><div class="ch">Net Profit</div><div class="v health-${netProfit>0?'green':'red'}" style="font-size:20px; font-weight:800;">$${netProfit.toFixed(2)}</div></div>`;
+  } else if(reportTab==='inventory'){
+    const val = inventory.reduce((s,i)=>s+i.qty*i.price,0);
+    body = `<div class="mcard"><div class="ch">Inventory Value</div><div class="mkpis" style="grid-template-columns:1fr 1fr;"><div class="mkpi"><div class="l">Total Value on Hand</div><div class="v">$${val.toFixed(2)}</div></div><div class="mkpi"><div class="l">Items Below Minimum</div><div class="v">${inventory.filter(i=>i.qty<=i.min).length}</div></div></div></div>`;
+  } else if(reportTab==='customers'){
+    body = `<div class="mcard"><div class="ch">Customer Summary</div><div class="mkpis" style="grid-template-columns:1fr 1fr;"><div class="mkpi"><div class="l">Total Customers</div><div class="v">${customers.length+1243}</div></div><div class="mkpi"><div class="l">New This Month</div><div class="v">32</div></div></div></div>`;
+  } else if(reportTab==='vehicles'){
+    body = `<div class="mcard"><div class="ch">Vehicle Summary</div><div class="mkpis" style="grid-template-columns:1fr 1fr;"><div class="mkpi"><div class="l">Vehicles on File</div><div class="v">${vehicles.length+3086}</div></div><div class="mkpi"><div class="l">Serviced This Month</div><div class="v">214</div></div></div></div>`;
+  } else if(reportTab==='employees'){
+    body = `<div class="mcard"><div class="ch">Employee Performance</div><table class="mtable"><thead><tr><th>Name</th><th>Role</th><th>Sales</th><th>Commission</th></tr></thead><tbody>${team.map(t=>`<tr><td><b>${t.name}</b></td><td>${t.role}</td><td>$${t.sales.toLocaleString()}</td><td>${t.commission}%</td></tr>`).join('')}</tbody></table></div>`;
+  } else if(reportTab==='payments'){
+    body = `<div class="mcard"><div class="ch">Payment Method Breakdown</div><div class="mdonut"><div class="hole">$28,965<br>Total</div></div><div class="mlegend"><div><span class="sw" style="background:var(--red)"></span>Credit Card 48.7%</div><div><span class="sw" style="background:var(--blue)"></span>Fleet 18.9%</div><div><span class="sw" style="background:var(--green)"></span>Cash 24.6%</div><div><span class="sw" style="background:var(--gold)"></span>Check 7.8%</div></div></div>`;
+  }
+  return `<div class="mtop"><div class="mh">Reports</div></div>
+  <div class="mtabs">${REPORT_TABS.map(([k,l])=>`<button class="${reportTab===k?'active':''}" onclick="reportTab='${k}'; renderApp();">${l}</button>`).join('')}</div>
+  ${body}`;
+}
+function drawReportChart(){
+  const canvas = document.getElementById('repChart'); if(!canvas) return;
+  const ctx = canvas.getContext('2d'); const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const data=[18200,21400,19800,24600,26100,28965]; const labels=['Dec','Jan','Feb','Mar','Apr','May'];
+  const max = Math.max(...data)*1.15; const bw = w/data.length;
+  data.forEach((v,i)=>{
+    const bh = (v/max)*(h-24); const x = i*bw+bw*0.22; const y = h-24-bh;
+    ctx.fillStyle = i===data.length-1 ? '#e0272c' : '#2a3049';
+    ctx.fillRect(x,y,bw*0.56,bh);
+    ctx.fillStyle = '#6b7386'; ctx.font='10px Inter'; ctx.textAlign='center';
+    ctx.fillText(labels[i], x+bw*0.28, h-8);
+  });
+}
+
+/* ---------------- INTEGRATIONS ---------------- */
+/* ---------------- DATA MIGRATION & IMPORT CENTER ---------------- */
+let migrationFlow = null; // null | 'spreadsheet' | 'scan'
+let importStep = 1;
+let importBatches = [
+  {id:'IMP-901', dataType:'Customers', fileName:'customer_export_legacy.csv', status:'Complete', imported:1487, skipped:8, duplicates:23, errors:5, date:'Apr 2, 2026'},
+  {id:'IMP-902', dataType:'Vehicles', fileName:'vehicle_records.xlsx', status:'Complete', imported:2210, skipped:2, duplicates:11, errors:0, date:'Apr 2, 2026'},
+];
+const SAMPLE_IMPORT_ROWS = [
+  {Customer_Name:'Rosa Martinez', Phone_Number:'555-201-9981', Email_Addr:'rosa.m@example.com', match:'New'},
+  {Customer_Name:'Jordan Ellis', Phone_Number:'555-201-3341', Email_Addr:'jordan.ellis@example.com', match:'Duplicate — matches existing customer'},
+  {Customer_Name:'', Phone_Number:'555-201-4420', Email_Addr:'k.brown@example.com', match:'Needs Review — missing name'},
+  {Customer_Name:'Devin Okafor', Phone_Number:'not-a-phone', Email_Addr:'devin.o@example.com', match:'Needs Review — invalid phone'},
+];
+function openImportFlow(type){ migrationFlow=type; importStep=1; renderApp(); }
+function closeImportFlow(){ migrationFlow=null; renderApp(); }
+function importNextStep(){ importStep++; renderApp(); }
+function confirmImport(){
+  const ready = SAMPLE_IMPORT_ROWS.filter(r=>r.match==='New').length;
+  const dup = SAMPLE_IMPORT_ROWS.filter(r=>r.match.startsWith('Duplicate')).length;
+  const review = SAMPLE_IMPORT_ROWS.filter(r=>r.match.startsWith('Needs Review')).length;
+  importBatches.unshift({id:'IMP-'+(900+importBatches.length+3), dataType:'Customers', fileName:'sample_import.csv', status:'Complete', imported:ready, skipped:review, duplicates:dup, errors:0, date:'Just now'});
+  logActivity('📁', `Imported ${ready} new customer records`);
+  mtoast(`Import complete — ${ready} records added`);
+  migrationFlow=null; renderApp();
+}
+
+function pageMigration(){
+  if(migrationFlow==='spreadsheet') return pageImportSpreadsheet();
+  if(migrationFlow==='scan') return pageImportScan();
+  const options = [
+    ['spreadsheet','📊','Import Spreadsheet Data','CSV or XLSX — customers, vehicles, service history, inventory, invoices, or fleet.'],
+    ['documents','🗂','Upload Documents','PDFs or images attached to a customer, vehicle, invoice, or job.'],
+    ['scan','📸','Scan Paper Documents','Photograph a paper record and review the extracted fields before saving.'],
+    ['software','🔗','Connect Existing Software','Export from your current system and bring it into Shop Logik.'],
+    ['assist','🧑‍💼','Request Migration Assistance','Not comfortable doing it yourself? Submit a request and describe what you have.'],
+  ];
+  return `
+  <div class="mtop"><div class="mh">Data Migration &amp; Import</div></div>
+  <p style="color:var(--m-text3); font-size:11px; margin-bottom:14px; max-width:560px;">Bring in your existing customers, vehicles, and history so you're not starting from zero. Nothing imports without your review first.</p>
+  <div class="m3col" style="margin-bottom:14px;">
+    ${options.map(([key,ic,title,desc])=>`
+      <div class="mcard">
+        <div style="font-size:20px; margin-bottom:8px;">${ic}</div>
+        <div style="font-size:12.5px; font-weight:700; margin-bottom:5px;">${title}</div>
+        <div style="font-size:10.5px; color:var(--m-text3); margin-bottom:10px; line-height:1.4;">${desc}</div>
+        <button class="mbtn-ghost mbtn-sm" onclick="${key==='spreadsheet'||key==='scan' ? `openImportFlow('${key}')` : `mtoast('${key==='documents'?'Document upload':key==='software'?'Direct software migration':'Migration assistance request'} — coming soon')`}">${key==='spreadsheet'||key==='scan'?'Start':'Learn more'}</button>
+      </div>`).join('')}
+  </div>
+  <div class="mcard">
+    <div class="ch">Import History</div>
+    <table class="mtable"><thead><tr><th>Batch</th><th>Type</th><th>File</th><th>Imported</th><th>Duplicates</th><th>Needs Review</th><th>Date</th></tr></thead>
+    <tbody>${importBatches.map(b=>`<tr><td><b>${b.id}</b></td><td>${b.dataType}</td><td>${b.fileName}</td><td class="pos">${b.imported}</td><td class="warn">${b.duplicates}</td><td>${b.skipped}</td><td>${b.date}</td></tr>`).join('')}</tbody></table>
+  </div>`;
+}
+
+function pageImportSpreadsheet(){
+  const rows = SAMPLE_IMPORT_ROWS;
+  return `
+  <div class="mtop"><div class="mh">Import Spreadsheet — Customers</div><button class="mbtn-ghost mbtn-sm" onclick="closeImportFlow()">✕ Cancel</button></div>
+  <div class="mflex" style="margin-bottom:14px;">
+    ${['1. Upload','2. Preview','3. Match Columns','4. Validate & Import'].map((s,i)=>`<span style="font-size:10.5px; font-weight:700; color:${importStep===i+1?'var(--red)':importStep>i+1?'var(--green)':'var(--m-text3)'};">${s}</span>${i<3?'<span style="color:var(--m-text3);">→</span>':''}`).join(' ')}
+  </div>
+  ${importStep===1?`
+    <div class="mcard" style="text-align:center; padding:36px;">
+      <div style="font-size:28px; margin-bottom:10px;">📁</div>
+      <div style="font-size:12.5px; margin-bottom:14px; color:var(--m-text2);">Drop a CSV or XLSX file here, or use the sample file to preview the workflow.</div>
+      <button class="mbtn" onclick="importNextStep()">Use Sample File — customer_export.csv</button>
+    </div>`:''}
+  ${importStep===2?`
+    <div class="mcard"><div class="ch">Preview — first ${rows.length} rows</div>
+      <table class="mtable"><thead><tr><th>Customer_Name</th><th>Phone_Number</th><th>Email_Addr</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td>${r.Customer_Name||'<span class="warn">(empty)</span>'}</td><td>${r.Phone_Number}</td><td>${r.Email_Addr}</td></tr>`).join('')}</tbody></table>
+      <button class="mbtn" style="margin-top:12px;" onclick="importNextStep()">Continue to Column Mapping</button>
+    </div>`:''}
+  ${importStep===3?`
+    <div class="mcard"><div class="ch">Match Columns</div>
+      <div class="mgrid2">
+        <div class="mfield"><label>Customer_Name maps to</label><select class="mselect"><option>Customer Name</option></select></div>
+        <div class="mfield"><label>Phone_Number maps to</label><select class="mselect"><option>Phone</option></select></div>
+        <div class="mfield"><label>Email_Addr maps to</label><select class="mselect"><option>Email</option></select></div>
+      </div>
+      <button class="mbtn" onclick="importNextStep()">Continue to Validation</button>
+    </div>`:''}
+  ${importStep===4?`
+    <div class="mcard"><div class="ch">Validation Results</div>
+      <table class="mtable"><thead><tr><th>Customer_Name</th><th>Phone_Number</th><th>Status</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td>${r.Customer_Name||'—'}</td><td>${r.Phone_Number}</td><td><span class="mbadge ${r.match==='New'?'b-done':r.match.startsWith('Duplicate')?'b-waiting':'b-ready'}">${r.match}</span></td></tr>`).join('')}</tbody></table>
+      <div style="font-size:10.5px; color:var(--m-text3); margin:10px 0;">${rows.filter(r=>r.match==='New').length} ready to import &middot; ${rows.filter(r=>r.match.startsWith('Duplicate')).length} duplicates will be skipped &middot; ${rows.filter(r=>r.match.startsWith('Needs Review')).length} need review before import.</div>
+      <button class="mbtn" onclick="confirmImport()">Import Ready Records</button>
+    </div>`:''}`;
+}
+
+function pageImportScan(){
+  return `
+  <div class="mtop"><div class="mh">Scan Paper Document</div><button class="mbtn-ghost mbtn-sm" onclick="closeImportFlow()">✕ Cancel</button></div>
+  <div class="mcard" style="text-align:center; padding:30px; margin-bottom:12px;">
+    <div style="font-size:28px; margin-bottom:10px;">📸</div>
+    <div style="font-size:12.5px; color:var(--m-text2); margin-bottom:14px;">Take a photo with a phone or tablet camera, or upload a scanned file.</div>
+    <button class="mbtn" onclick="mtoast('OCR extraction — Integration Required (no provider connected yet)')">Simulate Scan of a Sample Work Order</button>
+  </div>
+  <div class="mcard">
+    <div class="ch">Extracted Fields — Please Review</div>
+    <div class="mlist">
+      <div class="li"><span>Customer Name</span><b>Rosa Martinez <span class="mbadge b-ready" style="margin-left:6px;">Needs Review</span></b></div>
+      <div class="li"><span>Phone</span><b>555-201-9981 <span class="mbadge b-done" style="margin-left:6px;">High Confidence</span></b></div>
+      <div class="li"><span>Vehicle</span><b>2015 Honda Civic <span class="mbadge b-ready" style="margin-left:6px;">Needs Review</span></b></div>
+      <div class="li"><span>Service Performed</span><b>Oil Change, Cabin Filter <span class="mbadge b-done" style="margin-left:6px;">High Confidence</span></b></div>
+      <div class="li"><span>Date</span><b>Jan 14, 2023</b></div>
+    </div>
+    <div style="font-size:10.5px; color:var(--m-text3); margin:10px 0;">OCR is not connected yet — this shows the review workflow with sample text. Every extracted field requires your approval before it becomes part of a customer's official history.</div>
+    <button class="mbtn-ghost" onclick="mtoast('Real OCR extraction requires a connected provider — see Integrations')">Approve &amp; Attach to Customer</button>
+  </div>`;
+}
+
+function pageIntegrations(){
+  const group = (title, items) => `<div class="mcard" style="margin-bottom:10px;"><div class="ch">${title}</div>${items.map(it=>`
+    <div class="li" style="margin-bottom:6px;"><span>${it}</span><span class="healthbadge" style="background:var(--m-card2); color:var(--m-text3);">Not Connected</span></div>`).join('')}
+    </div>`;
+  return `
+  <div class="mtop"><div class="mh">Integrations</div></div>
+  <p style="color:var(--m-text3); font-size:11px; margin-bottom:14px; max-width:520px;">Nothing here is live yet — connecting any of these requires real vendor credentials and approval. This page is the architecture, ready for when you're ready to connect a provider.</p>
+  ${group('Communications', ['SMS Provider', 'Business Phone', 'Email Provider'])}
+  ${group('Payments', ['Shop Logik Billing (subscription)', 'POS Payment Processor'])}
+  ${group('Automotive Data', ['Vehicle Data (VIN Decode)', 'Repair Information', 'Parts Vendors'])}
+  ${group('Business', ['Accounting Software', 'Calendar Sync'])}
+  `;
+}
+
+/* ---------------- LOGIK AI ---------------- */
+let aiLog = [];
+function aiAsk(preset){
+  const input = document.getElementById('aiInput');
+  const text = preset || (input?input.value.trim():'');
+  if(!text) return;
+  aiLog.push({who:'me', text:escapeHtml(text)});
+  aiLog.push({who:'ai', text:aiReply(text)});
+  if(input) input.value='';
+  renderApp();
+}
+function aiReply(text){
+  const t = text.toLowerCase();
+  // Navigation help
+  if(t.includes('create an estimate')||t.includes('new estimate')) return `Go to Estimates in the sidebar, then "+ New Estimate." Add the customer, vehicle, and line items — you can convert it straight to an invoice once it's approved.`;
+  if(t.includes('fleet customer')||t.includes('add fleet')) return `Fleet accounts live under Fleet in the sidebar. Add the company there, then link vehicles to it the same way you'd link a vehicle to a regular customer.`;
+  if(t.includes('close') && t.includes('register')) return `Register close isn't built yet in this prototype — it'll live under Settings → POS Settings once the real backend is connected.`;
+  if(t.includes('split payment')) return `Split payments aren't available yet — right now POS supports one payment method per sale. It's on the list for the real build.`;
+  if(t.includes('add inventory')) return `Go to Inventory → "+ Add Item." You can set SKU, category, quantity, and minimum stock so low-stock alerts trigger correctly.`;
+  if(t.includes('employee account')) return `Employee accounts will live under Team once authentication is connected. For now Team shows read-only demo staff.`;
+  if(t.includes('sales report')) return `Reports → Sales shows the monthly trend, and Reports → Financials breaks out labor, COGS, and profit.`;
+  // Business insights
+  if(t.includes('labor')) { const pct=laborPercent(); const level=healthLevel(pct,TARGETS); return `Labor is at ${pct.toFixed(1)}% of net sales right now (${healthLabel(level)}). Target is ${TARGETS.laborTarget}%, warning at ${TARGETS.laborWarning}%.`; }
+  if(t.includes('revenue')||t.includes('which service')) return `Oil Change is generating the most revenue this month at $2,854, followed by State Inspection and Tire Rotation.`;
+  if(t.includes('sales')) return `Today's net sales are $${netSales().toFixed(2)} across ${invoices.length} invoices.`;
+  if(t.includes('slow')||t.includes('inventory')||t.includes('stock')) return `Low stock right now: Oil Filter PH10060 (${inventory[1].qty}), Fuel Filter FF204 (${inventory[4].qty}). Out of stock: ATF Transmission Fluid.`;
+  if(t.includes('schedule')) return `You have ${events.filter(e=>e.day==='Mon').length} jobs on today's schedule, starting with ${custName(events[0].customerId)} at ${events[0].time}.`;
+  if(t.includes('draft')||t.includes('text')) return `Draft: "Hi! Your vehicle is ready for pickup at ${SHOP.name}. Reply STOP to opt out."`;
+  return `This is a simulated response for the prototype. Logik AI is built to help you use Shop Logik and understand your shop's numbers — not to diagnose vehicle problems.`;
+}
+function pageAI(){
+  return `
+  <div class="mtop"><div class="mh">Logik AI</div></div>
+  <p style="color:var(--m-text3); font-size:11px; margin-bottom:10px; max-width:520px;">Logik AI helps you use Shop Logik and understand your numbers — it's not a repair diagnosis tool.</p>
+  <div class="mcard" style="max-width:540px;">
+    <div class="ch">Try asking</div>
+    <div class="mflex" style="margin-bottom:8px;">
+      <button class="mbtn-ghost mbtn-sm" onclick="aiAsk('How do I create an estimate?')">Create an estimate</button>
+      <button class="mbtn-ghost mbtn-sm" onclick="aiAsk('How do I add a fleet customer?')">Add a fleet customer</button>
+      <button class="mbtn-ghost mbtn-sm" onclick="aiAsk('Why is my labor percentage high today?')">Why is labor high today?</button>
+      <button class="mbtn-ghost mbtn-sm" onclick="aiAsk('Which service generated the most revenue?')">Top revenue service</button>
+      <button class="mbtn-ghost mbtn-sm" onclick="aiAsk('Which inventory items are running low?')">Low inventory</button>
+    </div>
+    <div class="aichat">${aiLog.map(m=>`<div class="${m.who==='me'?'me':'ai'}">${m.text}</div>`).join('') || '<div class="memptynote">No messages yet.</div>'}</div>
+    <div class="mflex"><input id="aiInput" class="minput" style="flex:1;" placeholder="Ask Logik AI..." onkeydown="if(event.key==='Enter')aiAsk()"><button class="mbtn" onclick="aiAsk()">Send</button></div>
+  </div>
+  <p style="color:var(--m-text3); font-size:11px; margin-top:12px; max-width:520px;">Responses are simulated for this prototype.</p>`;
+}
+
+/* ---------------- SETTINGS ---------------- */
+let notif = {sms:true, email:true, lowstock:true};
+function pageSettings(){
+  return `
+  <div class="mtop"><div class="mh">Settings</div></div>
+  <div class="mgrid2">
+    <div class="mcard">
+      <div class="ch">Shop Profile</div>
+      <div class="mfield"><label>Shop Name</label><input class="minput" value="${escapeHtml(SHOP.name)}"></div>
+      <div class="mfield"><label>Address</label><input class="minput" value="${escapeHtml(SHOP.address)}"></div>
+      <div class="mfield"><label>Phone</label><input class="minput" value="${escapeHtml(SHOP.phone)}"></div>
+      <button class="mbtn-ghost" onclick="mtoast('Profile saved (demo)')">Save Changes</button>
+    </div>
+    <div class="mcard">
+      <div class="ch">Appearance</div>
+      <div class="mfield"><label>Theme</label>
+        <div class="mtoggle"><button class="${darkMode?'active':''}" onclick="darkMode=true; document.getElementById('appRoot').classList.remove('light'); renderApp();">Dark</button><button class="${!darkMode?'active':''}" onclick="darkMode=false; document.getElementById('appRoot').classList.add('light'); renderApp();">Light</button></div>
+      </div>
+      <div class="ch" style="margin-top:14px;">Notifications</div>
+      ${['sms','email','lowstock'].map(k=>`<div class="mflex" style="justify-content:space-between; margin-bottom:8px;"><span style="font-size:11.5px;">${k==='sms'?'SMS alerts':k==='email'?'Email alerts':'Low stock alerts'}</span><div class="switch ${notif[k]?'on':''}" onclick="notif['${k}']=!notif['${k}']; renderApp();"><div class="knob"></div></div></div>`).join('')}
+      <div class="ch" style="margin-top:14px;">Integrations</div>
+      <div><span class="mchip">Payments — not connected</span><span class="mchip">SMS — not connected</span><span class="mchip">QuickBooks — not connected</span></div>
+      <div class="ch" style="margin-top:14px;">Subscription</div>
+      <div class="li"><span>Current Plan</span><b>Growth — $199/mo</b></div>
+    </div>
+  </div>
+  <div class="mcard" style="margin-top:10px;">
+    <div class="ch">Financial Targets</div>
+    <div class="mgrid2">
+      <div class="mfield"><label>Target Labor %</label><input class="minput" type="number" value="${TARGETS.laborTarget}" onchange="TARGETS.laborTarget=Number(this.value)||0; renderApp();"></div>
+      <div class="mfield"><label>Warning Labor %</label><input class="minput" type="number" value="${TARGETS.laborWarning}" onchange="TARGETS.laborWarning=Number(this.value)||0; renderApp();"></div>
+      <div class="mfield"><label>Critical Labor %</label><input class="minput" type="number" value="${TARGETS.laborCritical}" onchange="TARGETS.laborCritical=Number(this.value)||0; renderApp();"></div>
+    </div>
+    <div style="font-size:10px; color:var(--m-text3);">These drive the green/yellow/orange/red indicators on the Dashboard and Reports.</div>
+  </div>`;
+}
+
+/* ---------------- AUTH FLOW (demo only — nothing here persists) ---------------- */
+function pageAuth(){
+  if(authStep==='login') return pageLogin();
+  const steps = ['Create Account','Create Shop','Complete Setup'];
+  return `
+  <div style="max-width:440px; margin:20px auto;">
+    <div class="mflex" style="justify-content:center; margin-bottom:18px;">
+      ${steps.map((s,i)=>`<div style="display:flex; align-items:center; gap:6px;">
+        <div style="width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; background:${authStep>i+1?'var(--green)':authStep===i+1?'var(--red)':'var(--m-card2)'}; color:${authStep>=i+1?'#fff':'var(--m-text3)'};">${authStep>i+1?'✓':i+1}</div>
+        <span style="font-size:10.5px; color:${authStep===i+1?'var(--m-text)':'var(--m-text3)'}; font-weight:700;">${s}</span>
+        ${i<2?'<div style="width:20px; height:1px; background:var(--m-border); margin:0 4px;"></div>':''}
+      </div>`).join('')}
+    </div>
+    <div class="mcard">
+      ${authStep===1?`
+        <div class="ch">Step 1 — Create your account</div>
+        <div class="mfield"><label>Your Name</label><input class="minput" value="${escapeHtml(authData.name)}" oninput="authData.name=this.value" placeholder="Alex Morgan"></div>
+        <div class="mfield"><label>Email</label><input class="minput" type="email" value="${escapeHtml(authData.email)}" oninput="authData.email=this.value" placeholder="you@example.com"></div>
+        <div class="mfield"><label>Password</label><input class="minput" type="password" value="${escapeHtml(authData.password)}" oninput="authData.password=this.value" placeholder="••••••••"></div>
+        <button class="mbtn" style="width:100%;" onclick="authNext(1)">Continue</button>
+      `:''}
+      ${authStep===2?`
+        <div class="ch">Step 2 — Create your shop</div>
+        <div class="mfield"><label>Shop Name</label><input class="minput" value="${escapeHtml(authData.shopName)}" oninput="authData.shopName=this.value" placeholder="Demo Auto Center"></div>
+        <div class="mfield"><label>Phone</label><input class="minput" value="${escapeHtml(authData.shopPhone)}" oninput="authData.shopPhone=this.value" placeholder="(555) 010-2938"></div>
+        <div class="mfield"><label>Business Email</label><input class="minput" value="${escapeHtml(authData.shopEmail)}" oninput="authData.shopEmail=this.value" placeholder="shop@example.com"></div>
+        <div class="mfield"><label>Address</label><input class="minput" value="${escapeHtml(authData.address)}" oninput="authData.address=this.value" placeholder="482 Industrial Pkwy, Springfield, TX"></div>
+        <div class="mfield"><label>Shop Type</label><select class="mselect" onchange="authData.shopType=this.value">
+          <option>Independent Repair Shop</option><option>Quick Lube</option><option>Tire Shop</option><option>Multi-Bay Full Service</option><option>Fleet Service Center</option>
+        </select></div>
+        <div class="mflex"><button class="mbtn-ghost" onclick="authStep=1; renderApp();">Back</button><button class="mbtn" style="flex:1;" onclick="authNext(2)">Continue</button></div>
+      `:''}
+      ${authStep===3?`
+        <div class="ch">Step 3 — Review &amp; complete setup</div>
+        <div class="mlist" style="margin-bottom:14px;">
+          <div class="li"><span>Owner</span><b>${escapeHtml(authData.name)||'—'}</b></div>
+          <div class="li"><span>Email</span><b>${escapeHtml(authData.email)||'—'}</b></div>
+          <div class="li"><span>Shop</span><b>${escapeHtml(authData.shopName)||'—'}</b></div>
+          <div class="li"><span>Type</span><b>${escapeHtml(authData.shopType)}</b></div>
+        </div>
+        <div style="font-size:10.5px; color:var(--m-text3); margin-bottom:12px;">Demo Mode — this creates a local demo session only. No account is actually created until this is connected to Supabase Auth.</div>
+        <div class="mflex"><button class="mbtn-ghost" onclick="authStep=2; renderApp();">Back</button><button class="mbtn" style="flex:1;" onclick="authComplete()">Create Shop &amp; Enter Dashboard</button></div>
+      `:''}
+    </div>
+    <div style="text-align:center; margin-top:12px;"><button class="mbtn-ghost mbtn-sm" onclick="cancelAuth()">Cancel</button></div>
+  </div>`;
+}
+function pageLogin(){
+  return `
+  <div style="max-width:380px; margin:60px auto;">
+    <div class="mcard">
+      <div class="ch">Log in to Shop Logik</div>
+      <div class="mfield"><label>Email</label><input class="minput" id="loginEmail" placeholder="you@example.com"></div>
+      <div class="mfield"><label>Password</label><input class="minput" type="password" id="loginPassword" placeholder="••••••••"></div>
+      <button class="mbtn" style="width:100%;" onclick="loginComplete()">Log In</button>
+      <div style="text-align:center; margin-top:10px;"><button class="mbtn-ghost mbtn-sm" onclick="mtoast('Password reset — demo only')">Forgot password?</button></div>
+      <div style="font-size:10.5px; color:var(--m-text3); margin-top:10px;">Demo Mode — any email/password logs into the demo dashboard below. Real authentication requires Supabase Auth to be connected.</div>
+    </div>
+    <div style="text-align:center; margin-top:12px;"><button class="mbtn-ghost mbtn-sm" onclick="cancelAuth()">Cancel</button></div>
+  </div>`;
+}
+function authNext(step){
+  if(step===1 && (!authData.name || !authData.email || !authData.password)){ mtoast('Fill in all fields to continue'); return; }
+  if(step===2 && !authData.shopName){ mtoast('Enter a shop name to continue'); return; }
+  authStep = step+1; renderApp();
+}
+function authComplete(){
+  SHOP.name = authData.shopName || SHOP.name;
+  SHOP.owner = authData.name || SHOP.owner;
+  SHOP.phone = authData.shopPhone || SHOP.phone;
+  SHOP.address = authData.address || SHOP.address;
+  authStep = 0; currentTab = 'dashboard';
+  mtoast('Demo shop created — welcome to Shop Logik');
+  renderApp();
+}
+function loginComplete(){
+  authStep = 0; currentTab = 'dashboard';
+  mtoast('Demo login successful');
+  renderApp();
+}
+function escapeHtml(str){
+  return String(str==null?'':str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+renderApp();
+</script>
+</body>
+</html>

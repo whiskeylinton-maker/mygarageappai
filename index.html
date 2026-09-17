@@ -1701,11 +1701,10 @@ async function sendChat(text){
   const v = DATA.vehicles.find(x=>x.id===activeVehicleId);
   const vehicleContext = v ? `${v.year} ${v.make} ${v.model} ${v.trim}, ${v.mileage.toLocaleString()} miles, ${v.engine}, ${v.transmission}` : 'no vehicle specified';
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-6',
         max_tokens:1000,
         system:`You are "Ask My Garage AI Mechanic," the in-app diagnostic assistant for MyGarageAppAI. The user's vehicle: ${vehicleContext}. Respond like a sharp, friendly mechanic doing phone triage: 1) one short empathetic line, 2) a tight bulleted list (most common cause first) of likely causes using simple HTML <ul><li> tags only (no markdown asterisks), 3) two or three numbered targeted follow-up questions to narrow it down. Keep it under 140 words total. For anything safety-critical (brakes, steering, airbags, fuel leaks), explicitly recommend getting it inspected soon. Output raw HTML fragment only (ul/li/strong/p tags), no markdown, no code fences, no full document.`,
         messages: DATA.chat.map(m=>({role:m.role, content:m.text}))
@@ -2673,7 +2672,7 @@ const D_NAV_ITEMS=[
   {key:'calendar',     label:'Calendar',             icon:'calendar'},
   {key:'schedule',     label:'Daily Schedule',       icon:'clock'},
   {key:'aiManager',    label:'AI Manager',           icon:'bot'},
-  {key:'jarvis',       label:'AI Assistant (JARVIS)',icon:'bot'},
+  {key:'jarvis',       label:'AI Assistant (Drive Assist)',icon:'bot'},
   {key:'settings',     label:'Settings',             icon:'settings'},
 ];
 const D_SECTION_OF={aiManager:'dashboard',timeclock:'team',subscription:'settings',history:'reports',dailyReport:'dashboard',fleetDetail:'fleet',fleetVehicleDetail:'fleet',jobDetail:'jobs',posCheckout:'pos',bayCheckout:'bayStation',customerDetail:'customers',vehicleDetailShop:'vehicles',estimateDetail:'estimates',invoiceDetail:'invoices',techDetail:'team',quoteInboxDetail:'quoteInbox',apptDetail:'schedule'};
@@ -4268,13 +4267,13 @@ function convertApptToJob(id){
 
 /* ===== JARVIS AI ASSISTANT ===== */
 function dRenderJarvis(){
-  if(dJarvisChat.length===0) dJarvisChat=[{role:'assistant',text:`Hi! I'm JARVIS, your AI shop assistant. I know your inventory, jobs, and team data. Ask me anything — "What's on my schedule today?", "Show me low stock items", "Who's my top tech this month?", or ask about any customer or vehicle.`,time:nowTime()}];
+  if(dJarvisChat.length===0) dJarvisChat=[{role:'assistant',text:`Hi! I'm Drive Assist, your AI shop assistant. I know your inventory, jobs, and team data. Ask me anything — "What's on my schedule today?", "Show me low stock items", "Who's my top tech this month?", or ask about any customer or vehicle.`,time:nowTime()}];
   return `
-  <div class="d-topbar"><div><div class="d-title">AI Assistant — JARVIS</div><div class="d-shopname">Powered by Claude · knows your shop data in real time</div></div></div>
+  <div class="d-topbar"><div><div class="d-title">AI Assistant — Drive Assist</div><div class="d-shopname">Powered by Claude · knows your shop data in real time</div></div></div>
   <div class="jarvis-wrap">
     <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border-subtle);">
       <div class="jarvis-orb">${svgIn('bot',24)}</div>
-      <div><div style="font-weight:700;font-size:15px;">JARVIS</div><div style="font-size:11.5px;color:var(--success);">● Online — has access to your shop data</div></div>
+      <div><div style="font-weight:700;font-size:15px;">Drive Assist</div><div style="font-size:11.5px;color:var(--success);">● Online — has access to your shop data</div></div>
     </div>
     <div class="jarvis-body" id="jarvisBody">
       ${dJarvisChat.map(m=>`<div class="msg-row ${m.role}" style="max-width:88%;">${m.role==='assistant'?`<div class="jarvis-orb" style="width:26px;height:26px;">${svgIn('bot',13)}</div>`:''}<div><div class="msg-bubble">${m.text}</div><div class="msg-time">${m.time}</div></div></div>`).join('')}
@@ -4285,9 +4284,10 @@ function dRenderJarvis(){
       <button class="jarvis-suggest-btn" onclick="dSendJarvis('What needs my attention today?')">🚨 What needs my attention?</button>
       <button class="jarvis-suggest-btn" onclick="dSendJarvis('Who is my top technician this month?')">🏆 Who is my top technician?</button>
       <button class="jarvis-suggest-btn" onclick="dSendJarvis('How was my revenue this week?')">💰 How was my revenue?</button>
+      <button class="jarvis-suggest-btn" onclick="dShowSupportTicketModal()">🎫 Talk to a human — DriveMetrik support</button>
     </div>`}
     <div class="jarvis-input-row">
-      <input id="jarvisInput" placeholder="Ask JARVIS anything about your shop..." ${dJarvisLoading?'disabled':''}>
+      <input id="jarvisInput" placeholder="Ask Drive Assist anything about your shop..." ${dJarvisLoading?'disabled':''}>
       <div class="send-btn" onclick="dSendJarvisFromInput()" style="${dJarvisLoading?'opacity:.45;pointer-events:none;':''}">${svgIn('send',16)}</div>
     </div>
   </div>`;
@@ -4306,8 +4306,55 @@ Team: ${DATA.employees.map(e=>`${e.name} (${e.role}, $${e.hourlyRate||0}/hr, ${e
 Low stock: ${getLowStock().map(p=>`${p.name} (${p.stock} left)`).join(', ')||'none'}.
 Today's appointments: ${DATA.appointments.filter(a=>a.date==='2026-06-16').map(a=>`${a.time} ${a.customer} — ${a.service} (${a.status})`).join('; ')||'none'}.
 Monthly revenue: $${stats.totalRevenue}, estimated profit: $${Math.round(stats.grossProfit)}.`;
-  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:`You are JARVIS, the AI shop management assistant for MyGarageAppAI. You have full access to the shop's real-time data below. Answer concisely and helpfully. Use simple HTML (p, ul, li, strong, b) only — no markdown. Keep responses under 120 words unless the question needs detail.\n\nSHOP DATA:\n${shopContext}`,messages:dJarvisChat.map(m=>({role:m.role,content:m.text}))})})
+  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({max_tokens:1000,system:`You are Drive Assist, the AI shop management assistant for MyGarageAppAI. You have full access to the shop's real-time data below. Answer concisely and helpfully. Use simple HTML (p, ul, li, strong, b) only — no markdown. Keep responses under 120 words unless the question needs detail.\n\nSHOP DATA:\n${shopContext}`,messages:dJarvisChat.map(m=>({role:m.role,content:m.text}))})})
   .then(r=>r.json()).then(json=>{let txt=(json.content||[]).map(b=>b.text||'').join('\n').trim();if(!txt)txt='<p>Could not retrieve an answer. Try rephrasing.</p>';dJarvisChat.push({role:'assistant',text:txt,time:nowTime()});}).catch(()=>dJarvisChat.push({role:'assistant',text:`<p>Network error — check your connection and try again.</p>`,time:nowTime()})).finally(()=>{dJarvisLoading=false;dRenderMain();});
+}
+
+/* ===== DRIVE ASSIST — SUPPORT TICKET CAPTURE =====
+   Stub: stores tickets to localStorage until a real backend (Supabase)
+   is connected — same "works offline, ready to wire up later" pattern
+   used for SUPABASE_URL/SUPABASE_KEY elsewhere in this file. */
+function driveAssistGetTickets(){
+  try{ return JSON.parse(localStorage.getItem('driveAssistTickets')||'[]'); }
+  catch(e){ return []; }
+}
+function driveAssistSaveTicket(ticket){
+  const tickets=driveAssistGetTickets();
+  tickets.unshift(ticket);
+  try{ localStorage.setItem('driveAssistTickets', JSON.stringify(tickets)); }catch(e){}
+}
+function dShowSupportTicketModal(){
+  showModal(`
+    <div style="font-size:17px;font-weight:800;margin-bottom:4px;">Talk to a human</div>
+    <div style="font-size:12.5px;color:var(--text-mid);margin-bottom:18px;">Tell us what's going on and DriveMetrik support will follow up. This doesn't page anyone automatically yet — it's saved here for now.</div>
+    ${mField('Your Name', mInput('ticketName','text','Alex Morgan', DATA.shop.ownerName||''))}
+    ${mField('Best Contact (email or phone)', mInput('ticketContact','text','you@example.com'))}
+    ${mField("What's going on?", `<textarea id="ticketIssue" rows="4" placeholder="Describe the problem..." style="width:100%;background:var(--bg-input);border:1px solid var(--border-subtle);color:var(--text-hi);border-radius:9px;padding:12px 14px;font-size:13.5px;resize:none;outline:none;"></textarea>`)}
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="dSubmitSupportTicket()">Submit Ticket</button>
+    </div>
+  `);
+}
+function dSubmitSupportTicket(){
+  const name=(document.getElementById('ticketName')||{}).value.trim();
+  const contact=(document.getElementById('ticketContact')||{}).value.trim();
+  const issue=(document.getElementById('ticketIssue')||{}).value.trim();
+  if(!contact||!issue){ showToast('Add a contact and describe the issue first'); return; }
+  const ticket={
+    id:'TICKET-'+Date.now(),
+    name: name||'(not provided)',
+    contact,
+    issue,
+    shop: DATA.shop.name||'',
+    createdAt: new Date().toISOString(),
+    status:'Open',
+  };
+  driveAssistSaveTicket(ticket);
+  closeModal();
+  showToast('Ticket submitted — DriveMetrik support will reach out');
+  dJarvisChat.push({role:'assistant', text:`<p>Got it — I've logged a support ticket (${ticket.id}) with the details you gave me. Someone from DriveMetrik support will follow up at ${escapeHtml(contact)}.</p>`, time:nowTime()});
+  dRenderMain();
 }
 
 /* ===== SETTINGS ===== */
@@ -11474,14 +11521,14 @@ const SHOP_PLAN_HIGHLIGHTS={
   trial:['Every feature unlocked','No card required','7 days full access'],
   basic:['Point of Sale','Jobs & Invoicing','Customer & Vehicle Records','Appointment Calendar'],
   standard:['Everything in Basic','Fleet Account Billing','Inventory Tracking','Profit Reports','Coupons & Promotions'],
-  pro:['Everything in Standard','JARVIS AI Assistant','Team Payroll & Timeclock','Daily Cash Reports','Full Business History'],
+  pro:['Everything in Standard','Drive Assist AI','Team Payroll & Timeclock','Daily Cash Reports','Full Business History'],
 };
 
 const SHOP_PLAN_FEATURES={
-  trial:['Full access to every feature — free for 7 days','Dashboard, Jobs, Customers, POS, Bay Station, Invoicing','Fleet accounts, Inventory, Follow-ups, Calendar','JARVIS AI, Daily Report, History Calendar, Team Payroll','No credit card required to start'],
+  trial:['Full access to every feature — free for 7 days','Dashboard, Jobs, Customers, POS, Bay Station, Invoicing','Fleet accounts, Inventory, Follow-ups, Calendar','Drive Assist AI, Daily Report, History Calendar, Team Payroll','No credit card required to start'],
   basic:['Dashboard, Jobs, Customers, Vehicles','Point of Sale & Bay Station checkout','Invoices, Estimates, Appointment Calendar','Everything you need to run daily operations'],
   standard:['Everything in Basic','Fleet account billing & management','Inventory with editable prices & stock','Follow-up system, Quote Inbox','Revenue reports & profit breakdown','Coupons & promotions'],
-  pro:['Everything in Standard','⭐ JARVIS AI — your 24/7 shop assistant','⭐ Full team management, pay rates & commissions','⭐ Timeclock with automatic overtime detection','⭐ Daily Report — cash drawer count & variance','⭐ History Calendar — any day, week, or month, forever'],
+  pro:['Everything in Standard','⭐ Drive Assist — your 24/7 shop assistant','⭐ Full team management, pay rates & commissions','⭐ Timeclock with automatic overtime detection','⭐ Daily Report — cash drawer count & variance','⭐ History Calendar — any day, week, or month, forever'],
 };
 
 const PLAN_ACCESS={
@@ -11509,11 +11556,11 @@ const PRO_VALUE={
       '⭐ Eliminate payroll disputes — every hour and job is timestamped and documented',
       '⭐ Shops using automated tech pay tracking save 3–5 hours per week on payroll admin',
     ],cta:'Upgrade to Pro — Know your true labor cost'},
-  jarvis:{icon:'🤖',feature:'JARVIS AI Shop Assistant',
+  jarvis:{icon:'🤖',feature:'Drive Assist AI Shop Assistant',
     headline:'An AI that knows your shop, customers, and inventory',
     points:[
       '⭐ Ask anything — "What\'s my most profitable service this month?" — instant answer, no report needed',
-      '⭐ JARVIS reads your job history, customer records & inventory to give shop-specific recommendations',
+      '⭐ Drive Assist reads your job history, customer records & inventory to give shop-specific recommendations',
       '⭐ Draft follow-up messages, marketing copy, and service explanations in seconds',
       '⭐ Shops using AI assistants report 40% faster customer response times and fewer missed follow-ups',
     ],cta:'Upgrade to Pro — Put AI to work for your shop'},
@@ -11797,7 +11844,7 @@ function dRenderSubscription(){
       ['⏱','Payroll Automation','Sun–Sat timeclock. Employee punch in/out from any device. OT auto-detected at 40hrs. 1.5× rate calculated instantly.'],
       ['📋','Digital Timesheets','One tap sends individual timesheets to each employee via text or email at end of week.'],
       ['💼','Payroll Clerk Export','Full payroll summary — all employees, hours, OT flags, gross pay — sent to your payroll clerk via email or text.'],
-      ['🤖','JARVIS AI Assistant','Ask anything: "What\'s my most profitable service?" — answered instantly without running a report.'],
+      ['🤖','Drive Assist AI','Ask anything: "What\'s my most profitable service?" — answered instantly without running a report.'],
       ['📊','Daily Report & Drawer','Cash, card, check, fleet — totaled separately. Opening/closing drawer process with cash count and variance.'],
       ['📅','History Calendar','Click any past day, week, or month to see full stats and every invoice — going back forever.'],
       ['⚠️','Overtime Alerts','Real-time badge when any tech exceeds 40hrs. ⚠️ flag on their card. Text/email warning to manager.'],
@@ -12642,11 +12689,10 @@ OPEN JOBS: ${brief.openJobs}
 
 Generate your management insights now. Return ONLY valid JSON array.`;
 
-  fetch('https://api.anthropic.com/v1/messages',{
+  fetch('/api/chat',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'claude-sonnet-4-6',
       max_tokens:2000,
       system:systemPrompt,
       messages:[{role:'user',content:dataPrompt}],

@@ -1,0 +1,9 @@
+{
+  "name": "mygarageappai",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "stripe": "^22.6.0",
+    "@supabase/supabase-js": "^2.57.0"
+  }
+}

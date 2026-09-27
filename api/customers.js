@@ -1,16 +1,21 @@
-// GET    /api/customers            -> list this shop's customers
-// POST   /api/customers { name, phone?, email?, address?, notes?, isFleet? }
+// GET    /api/customers[?id=<uuid>]  -> list this shop's customers (or one)
+// POST   /api/customers { id?, name, phone?, email?, address?, notes?, isFleet? }
+// PATCH  /api/customers?id=<uuid> { name?, phone?, email?, address?, notes?, isFleet? }
 // DELETE /api/customers?id=<uuid>
 // shop_id is always set server-side from the caller's employee record; RLS double-enforces.
 import { requireUser, requireShop, readBody, sendError } from './_lib/supabase.js';
 const COLS = 'id, shop_id, name, phone, email, address, notes, is_fleet, created_at';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const clean = (v) => { if (v === undefined) return undefined; const s = String(v ?? '').trim(); return s && s !== '—' ? s : null; };
 export default async function handler(req, res) {
   try {
     const { db } = await requireUser(req);
     const shopId = await requireShop(db);
+    const id = req.query.id;
+    if (id && !UUID.test(id)) return res.status(404).json({ error: 'Not found' });
     if (req.method === 'GET') {
-      if (req.query.id) {
-        const { data, error } = await db.from('customers').select(COLS).eq('id', req.query.id).maybeSingle();
+      if (id) {
+        const { data, error } = await db.from('customers').select(COLS).eq('id', id).maybeSingle();
         if (error) throw error;
         if (!data) return res.status(404).json({ error: 'Not found' });
         return res.status(200).json({ customer: data });
@@ -21,17 +26,30 @@ export default async function handler(req, res) {
     }
     if (req.method === 'POST') {
       const b = readBody(req);
-      if (!b.name || !String(b.name).trim()) return res.status(400).json({ error: 'Customer name is required' });
-      const { data, error } = await db.from('customers').insert({
-        shop_id: shopId, name: String(b.name).trim(), phone: b.phone || null, email: b.email || null,
-        address: b.address || null, notes: b.notes || null, is_fleet: b.isFleet === true, is_test_data: b.isTestData === true,
-      }).select(COLS).single();
+      if (!clean(b.name)) return res.status(400).json({ error: 'Customer name is required' });
+      if (b.id !== undefined && !UUID.test(String(b.id))) return res.status(400).json({ error: 'id must be a UUID' });
+      const row = { shop_id: shopId, name: clean(b.name), phone: clean(b.phone) ?? null, email: clean(b.email) ?? null,
+        address: clean(b.address) ?? null, notes: clean(b.notes) ?? null, is_fleet: b.isFleet === true, is_test_data: b.isTestData === true };
+      if (b.id) row.id = b.id;
+      const { data, error } = await db.from('customers').insert(row).select(COLS).single();
       if (error) throw error;
       return res.status(200).json({ customer: data });
     }
+    if (req.method === 'PATCH') {
+      if (!id) return res.status(400).json({ error: 'id is required' });
+      const b = readBody(req); const u = {};
+      if (b.name !== undefined) { if (!clean(b.name)) return res.status(400).json({ error: 'Customer name is required' }); u.name = clean(b.name); }
+      for (const k of ['phone', 'email', 'address', 'notes']) if (b[k] !== undefined) u[k] = clean(b[k]);
+      if (b.isFleet !== undefined) u.is_fleet = b.isFleet === true;
+      if (!Object.keys(u).length) return res.status(400).json({ error: 'Nothing to update' });
+      const { data, error } = await db.from('customers').update(u).eq('id', id).select(COLS);
+      if (error) throw error;
+      if (!data.length) return res.status(404).json({ error: 'Not found' });
+      return res.status(200).json({ customer: data[0] });
+    }
     if (req.method === 'DELETE') {
-      if (!req.query.id) return res.status(400).json({ error: 'id is required' });
-      const { data, error } = await db.from('customers').delete().eq('id', req.query.id).select('id');
+      if (!id) return res.status(400).json({ error: 'id is required' });
+      const { data, error } = await db.from('customers').delete().eq('id', id).select('id');
       if (error) throw error;
       if (!data.length) return res.status(404).json({ error: 'Not found' });
       return res.status(200).json({ deleted: data[0].id });

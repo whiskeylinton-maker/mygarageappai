@@ -8153,7 +8153,7 @@ function renderDashboard(){
       <div style="flex:1;">
         <div style="font-weight:700;font-size:14px;margin-bottom:3px;">📲 Share This App</div>
         <div style="font-size:11.5px;color:var(--text-mid);line-height:1.5;">Scan QR · Copy link · Text to a friend</div>
-        <div style="font-family:var(--font-mono);font-size:10px;color:var(--blue-bright);margin-top:4px;">mygarageappai.com</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--blue-bright);margin-top:4px;">${APP_URL.replace(/^https?:\/\//,'')}</div>
       </div>
       <div style="color:var(--blue-bright);">${svgIn('chevron',18)}</div>
     </div>`}
@@ -11016,7 +11016,7 @@ function renderDashSection_ShareQR(){
           Print this QR and put it at the front desk — customers scan it to access their account, book appointments, get quotes, and see their service history.
         </div>
         <div style="font-family:var(--font-mono);font-size:12px;color:var(--blue-bright);background:var(--bg-input);padding:8px 12px;border-radius:8px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
-          <span>mygarageappai.com</span>
+          <span>${APP_URL.replace(/^https?:\/\//,'')}</span>
           <button onclick="copyAppLink()" style="background:var(--blue-bright);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Copy</button>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -18120,11 +18120,11 @@ function migrationSendWelcomeCampaign(){
     if(!canSendSms(c, 'serviceUpdates')){ skippedPrefs++; return; }
     const firstName = (c.name||'').trim().split(' ')[0] || 'there';
     const msg = withPrefsFooter(
-      `Hi ${firstName}! ${DATA.shop.name||'Your shop'} now uses DriveMetrik to manage your vehicle service. You can track service history, approve estimates, and see invoices anytime at ${APP_URL}. Questions? Just call us.`,
+      `Hi ${firstName}! ${DATA.shop.name||'Your shop'} now offers online service tracking. You can track service history, approve estimates, and see invoices anytime at ${APP_URL}. Questions? ${(DATA.shop.phone||'').trim() ? 'Call us at '+DATA.shop.phone.trim()+'.' : 'Just call us.'}`,
       c
     );
     sendSMS(c.phone, msg, {successMsg:'', fallbackMsg:''});
-    logCommHistory(c, 'sms', 'serviceUpdates', 'Welcome to DriveMetrik');
+    logCommHistory(c, 'sms', 'serviceUpdates', 'Welcome text');
     sent++;
   });
   migrationState.welcomeCampaignResult = { sent, skippedNoPhone, skippedPrefs };
@@ -19213,7 +19213,7 @@ function submitAddReview(){
 /* =========================================================
    QR CODE — SHARE THE APP
    ========================================================= */
-const APP_URL = 'https://mygarageappai.com';
+const APP_URL = 'https://drivemetrik.com'; // customer links + QR codes. mygarageappai.com still points at this same app, so already-printed QRs keep working.
 const APP_NAME = 'DriveMetrik — ';
 
 // Real supporting art for the homepage -- both derived from the original
@@ -20422,10 +20422,10 @@ function composeCheckInSMS(customer, vehicle, job, invoice, servicesLabel, milea
   msg += `\nWe'll keep you updated throughout your visit.\n\n`;
   msg += `Track your service, approve repairs, view photos, invoices, and your vehicle history here:\n${statusLink}\n`;
 
-  const returning = isReturningCustomer(customer.id, job.id);
-  if(!returning || !customer.appInstalled){
-    msg += `\nNew to DriveMetrik? Visit us online here:\n${APP_URL}\n`;
-  }
+  // Customer texts speak for the SHOP, not the software -- the customer's relationship
+  // is with the shop. Give them the shop's own number instead of a software promo.
+  const shopPhone = (DATA.shop.phone||'').trim();
+  if(shopPhone) msg += `\nQuestions? Call ${shopName} at ${shopPhone}.\n`;
   msg += `\nThank you for choosing ${shopName}!`;
   return msg;
 }

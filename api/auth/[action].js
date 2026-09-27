@@ -24,6 +24,8 @@ async function login(b) {
   const { email, password } = b;
   if (!email || !password) return [400, { error: 'Email and password are required' }];
   const { data, error } = await anonClient().auth.signInWithPassword({ email: String(email).trim().toLowerCase(), password });
+  if (error && (error.code === 'email_not_confirmed' || /not confirmed/i.test(error.message || '')))
+    return [403, { error: 'Please confirm your email first — check your inbox for the confirmation link.' }];
   if (error || !data.session) return [401, { error: 'Invalid email or password' }];
   return [200, { user: { id: data.user.id, email: data.user.email }, session: pick(data.session) }];
 }

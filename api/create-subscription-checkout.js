@@ -62,6 +62,8 @@ export default async function handler(req, res) {
           currency: 'usd',
           interval: 'month',
           accepted_via: 'subscription_checkout',
+          commitment_label: plan.commitmentLabel,
+          commitment_months: plan.commitmentMonths,
           user_agent: String(req.headers['user-agent'] || '').slice(0, 500),
         },
       })

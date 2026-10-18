@@ -1,0 +1,23 @@
+name: DriveMetrik Billing Verification
+on:
+  push:
+    branches:
+      - main
+      - launch/drivemetrik-billing
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  verify-billing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Test subscription safety and syntax
+        run: node scripts/verify-billing.mjs

@@ -6,18 +6,24 @@ export const BILLING_PLANS = Object.freeze({
     label: 'DriveMetrik Starter',
     priceId: 'price_1UQV74EPcevq976Kbmk9TueO',
     priceCents: 9900,
+    commitmentMonths: null,
+    commitmentLabel: 'Month-to-month; cancel anytime',
   }),
   pro: Object.freeze({
     key: 'pro',
     label: 'DriveMetrik Pro',
     priceId: 'price_1UQVCBEPcevq976KfyJ3FcFB',
     priceCents: 19900,
+    commitmentMonths: 6,
+    commitmentLabel: '6-month minimum commitment; billed monthly',
   }),
   business: Object.freeze({
     key: 'business',
     label: 'DriveMetrik Business',
     priceId: 'price_1UQVAiEPcevq976K4IhqKQHZ',
     priceCents: 24900,
+    commitmentMonths: null,
+    commitmentLabel: 'Month-to-month; cancel anytime',
   }),
 });
 

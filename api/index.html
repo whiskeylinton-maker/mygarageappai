@@ -7449,37 +7449,50 @@ function togglePlanCard(key){
   arrow.textContent = isOpen ? '↓' : '↑';
 }
 async function subscribeNow(planKey){
-  // No real, database-backed shop ID exists yet (SHOP_ID stays null until
-  // Supabase is connected) -- generate/reuse a temporary, local identifier
-  // so the real Stripe checkout flow can genuinely be tested end to end
-  // today. This is NOT yet a real account record on a server; it just lets
-  // this specific browser consistently identify itself to Stripe for
-  // testing purposes until real accounts exist.
-  let pendingShopId = localStorage.getItem('pending-shop-id');
-  if(!pendingShopId){
-    pendingShopId = 'pending-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
-    localStorage.setItem('pending-shop-id', pendingShopId);
-  }
-  const email = localStorage.getItem('shop-email') || '';
-
-  try{
-    const res = await fetch('/api/create-subscription-checkout', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ planKey, shopId: pendingShopId, shopEmail: email, useDiscount: true }),
-    });
-    if(!res.ok) throw new Error('checkout endpoint not available');
-    const data = await res.json();
-    if(!data.url) throw new Error('no checkout url returned');
-    window.location.href = data.url; // hands off to Stripe's own hosted checkout page
+  const plans={starter:{label:'Starter',price:99},pro:{label:'Pro',price:199},business:{label:'Business',price:249}};
+  const plan=plans[planKey];
+  if(!plan){showToast('Choose a valid DriveMetrik plan');return;}
+  if(typeof dmApiAvailable!=='function'||!dmApiAvailable()){
+    showToast('Secure subscription checkout is available on the live DriveMetrik website.');
     return;
-  }catch(e){
-    // Honest fallback: the backend isn't deployed/reachable yet, so there's
-    // genuinely nothing to redirect to. Say so plainly rather than show a
-    // broken page, and keep the site usable via the existing trial path.
-    alert("Online payment isn't connected yet — starting your free trial instead so you can explore the plan. The 10% first-month discount will apply once payment is live.");
-    startTrial(planKey);
   }
+  if(typeof dmGetSession!=='function'||!dmGetSession()){
+    showToast('Sign in to your shop account before subscribing.');
+    if(typeof showDriveMetrikLoginModal==='function')showDriveMetrikLoginModal('shop');
+    return;
+  }
+  const accepted=confirm('Subscribe to DriveMetrik '+plan.label+' for $'+plan.price+'/month, billed monthly until canceled? Payment details are entered securely on Stripe Checkout. Continuing records your consent to this recurring monthly subscription.');
+  if(!accepted)return;
+  try{
+    const result=await dmApi('POST','/api/create-subscription-checkout',{
+      planKey:planKey,termsAccepted:true,termsVersion:'drivemetrik-recurring-v1'
+    });
+    if(!result.ok){showToast(result.data.error||'Could not start checkout. No charge was made.');return;}
+    if(!result.data||!result.data.url)throw new Error('Stripe did not return a checkout link');
+    window.location.href=result.data.url;
+  }catch(error){
+    console.error('DriveMetrik checkout could not start:',error);
+    showToast('Secure checkout is unavailable right now. No charge was made; please try again later.');
+  }
+}
+function manageBilling(){
+  if(typeof dmApiAvailable!=='function'||!dmApiAvailable()){
+    showToast('Billing management is available on the live DriveMetrik website.');
+    return;
+  }
+  if(typeof dmGetSession!=='function'||!dmGetSession()){
+    showToast('Sign in to your shop account first.');
+    if(typeof showDriveMetrikLoginModal==='function')showDriveMetrikLoginModal('shop');
+    return;
+  }
+  dmApi('POST','/api/create-billing-portal',{}).then(function(result){
+    if(!result.ok){showToast(result.data.error||'Billing management is not ready yet.');return;}
+    if(result.data&&result.data.url)window.location.href=result.data.url;
+    else showToast('Stripe did not return a billing link.');
+  }).catch(function(error){
+    console.error('DriveMetrik billing portal could not open:',error);
+    showToast('Billing management is unavailable right now.');
+  });
 }
 
 function renderMktPricing(){
@@ -25021,22 +25034,23 @@ const PRO_VALUE={
 // a confirmation, and -- critically -- renders an impossible-to-miss banner
 // the entire time it's on, so it can never be mistaken for real access by
 // anyone, including future-you forgetting it's enabled.
-// ⚠ PRE-LAUNCH STATE: this file has never been deployed anywhere real, has
-// no live database, and has no real customers -- so gating your own testing
-// serves no purpose right now. Returns full access unconditionally.
-//
-// THIS MUST CHANGE before this app ever runs against a real backend with
-// real customers: once Supabase is connected, this needs to read an actual
-// server-verified subscription status instead of returning a fixed value.
-// Search for "PRE-LAUNCH STATE" to find this comment again later.
+// Plan access is derived from authenticated server subscription state. Local data never grants a paid tier.
 function shopGetPlan(){
-  return 'business';
+  if(typeof DM_CLOUD==='undefined'||!DM_CLOUD)return 'unconfigured';
+  const plan=String(DATA.shop.subscriptionPlan||'').toLowerCase();
+  const status=String(DATA.shop.subscriptionStatus||'').toLowerCase();
+  if(status==='active'&&['starter','start','pro','business'].includes(plan))return plan==='start'?'starter':plan;
+  if(status==='trialing'){
+    const end=DATA.shop.trialEndsAt?Date.parse(DATA.shop.trialEndsAt):NaN;
+    if(Number.isFinite(end)&&end>Date.now())return 'trial';
+  }
+  return 'unconfigured';
 }
 function shopTrialDaysLeft(){
-  if(!localStorage.getItem('shop-trial-start'))
-    localStorage.setItem('shop-trial-start',String(Date.now()));
-  const start=parseInt(localStorage.getItem('shop-trial-start'));
-  return Math.max(0,SHOP_PLANS.trial.days-Math.floor((Date.now()-start)/(1000*60*60*24)));
+  if(typeof DM_CLOUD==='undefined'||!DM_CLOUD||!DATA.shop.trialEndsAt)return 0;
+  const end=Date.parse(DATA.shop.trialEndsAt);
+  if(!Number.isFinite(end))return 0;
+  return Math.max(0,Math.ceil((end-Date.now())/(1000*60*60*24)));
 }
 function shopCanAccess(key){
   const plan=shopGetPlan();
@@ -25139,49 +25153,13 @@ function shopActivatePlan(planKey){
   showPaymentModal(planKey);
 }
 
-/* Mock payment-collection step. This is a demo checkout (no live Stripe key is
-   wired into this static file) but it deliberately mirrors the real flow: card
-   details are only ever requested here, at the moment of actually subscribing —
-   never during trial signup or anywhere else in the app. */
 function showPaymentModal(planKey){
-  const plan=SHOP_PLANS[planKey];
-  if(!plan) return;
-  const upgradeEl=document.getElementById('shopUpgradeOverlay');
-  if(upgradeEl) upgradeEl.remove();
-  const overlay=document.createElement('div');
-  overlay.id='shopPaymentOverlay';
-  overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
-  overlay.innerHTML=`<div style="background:var(--bg-panel);border-radius:20px;padding:24px 22px;max-width:400px;width:100%;border:1.5px solid ${plan.color}55;">
-    <div style="text-align:center;margin-bottom:18px;">
-      <div style="font-family:var(--font-display);font-weight:700;font-size:19px;">Subscribe to ${plan.label}</div>
-      <div style="font-size:13px;color:var(--text-mid);margin-top:4px;">$${plan.price.toFixed(2)}/mo · ${shopCommitmentLabel(planKey,true)}</div>
-    </div>
-    <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.25);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--success);">
-      🔒 This is where payment would be collected in production, connected to Stripe. Nothing is charged in this demo.
-    </div>
-    <div style="margin-bottom:12px;"><label style="font-size:11.5px;color:var(--text-mid);font-weight:600;">Card Number</label>
-      <input placeholder="4242 4242 4242 4242" style="width:100%;background:var(--bg-input);border:1px solid var(--border-subtle);color:var(--text-hi);border-radius:9px;padding:11px 14px;font-size:13.5px;outline:none;margin-top:5px;font-family:var(--font-mono);"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-      <div><label style="font-size:11.5px;color:var(--text-mid);font-weight:600;">Expiry</label>
-        <input placeholder="MM/YY" style="width:100%;background:var(--bg-input);border:1px solid var(--border-subtle);color:var(--text-hi);border-radius:9px;padding:11px 14px;font-size:13.5px;outline:none;margin-top:5px;font-family:var(--font-mono);"></div>
-      <div><label style="font-size:11.5px;color:var(--text-mid);font-weight:600;">CVC</label>
-        <input placeholder="123" style="width:100%;background:var(--bg-input);border:1px solid var(--border-subtle);color:var(--text-hi);border-radius:9px;padding:11px 14px;font-size:13.5px;outline:none;margin-top:5px;font-family:var(--font-mono);"></div>
-    </div>
-    <button onclick="shopConfirmSubscribe('${planKey}')" style="width:100%;background:linear-gradient(135deg,${plan.color},${plan.color});color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;">Confirm — $${plan.price.toFixed(2)}/mo</button>
-    <div style="font-size:11px;color:var(--text-low);text-align:center;margin-bottom:12px;">Billed monthly · ${shopCommitmentLabel(planKey)}</div>
-    <button onclick="document.getElementById('shopPaymentOverlay').remove()" style="width:100%;background:transparent;color:var(--text-low);border:1px solid var(--border-subtle);border-radius:12px;padding:11px;font-size:14px;cursor:pointer;font-family:inherit;">Cancel</button>
-  </div>`;
-  overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
-  document.body.appendChild(overlay);
+  // Paid subscriptions always go to Stripe-hosted Checkout; never collect card details in DriveMetrik.
+  return subscribeNow(planKey);
 }
 function shopConfirmSubscribe(planKey){
-  // No longer writes shop-plan/shop-subscribed-at -- see shopGetPlan(). This
-  // demo payment form cannot grant real access without a real backend and a
-  // real payment actually being verified server-side.
-  const el=document.getElementById('shopPaymentOverlay');
-  if(el) el.remove();
-  showToast('Billing unavailable until server setup is complete');
-  dRenderMain();
+  // Compatibility shim. A local/browser state change cannot grant an entitlement.
+  return subscribeNow(planKey);
 }
 
 // Distinct from showShopUpgradeModal -- this is for a shop that's already Pro but
@@ -25277,61 +25255,45 @@ function showShopUpgradeModal(screen){
 function dRenderSubscription(){
   const plan=shopGetPlan();
   const daysLeft=plan==='trial'?shopTrialDaysLeft():null;
-  const trialExpired=plan==='trial'&&daysLeft===0;
-
-  function tierCard(key,isCurrent){
-    const p=SHOP_PLANS[key];
-    const isTrial=key==='trial';
-    return '<div style="background:'+(isCurrent?p.color+'0a':'var(--bg-elevated)')+';border:2px solid '+(isCurrent?p.color:'var(--border-subtle)')+';border-radius:16px;padding:18px;margin-bottom:12px;">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'
-      +'<div><div style="font-weight:700;font-size:15px;color:'+p.color+';">'+(isTrial?'🆓 Free Trial':key==='business'?'👑 Business':key==='pro'?'📈 Pro':'🏪 Starter')+(isCurrent?' <span style="font-size:11px;color:var(--success);">✓ Active</span>':'')+'</div>'
-      +'<div style="font-size:10.5px;color:var(--text-low);margin-top:3px;">'+(isTrial?SHOP_PLANS.trial.days+' days · no credit card required':shopCommitmentLabel(key)+' · billed monthly')+'</div>'
-      +'</div>'
-      +'<div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:'+p.color+';text-align:right;">'+(isTrial?'Free':'$'+p.price.toFixed(2)+'<span style="font-size:12px;font-weight:400;color:var(--text-low);">/mo</span>')+'</div>'
-      +'</div>'
-      +(!isTrial?'<div style="font-size:12px;color:var(--text-mid);line-height:1.6;padding:8px 10px;background:var(--bg-panel);border-radius:8px;margin-bottom:10px;">'+SHOP_PLAN_PITCH[key]+'</div>':'')
-      +SHOP_PLAN_FEATURES[key].map(function(f){return '<div style="font-size:12.5px;color:'+(f.startsWith('⭐')?'var(--orange)':'var(--text-mid)')+';padding:3px 0;display:flex;gap:6px;"><span style="color:'+(f.startsWith('⭐')?'var(--orange)':'var(--success)')+';">✓</span>'+f+'</div>';}).join('')
-      +(!isCurrent&&!isTrial?'<button onclick="showPaymentModal(\''+key+'\')" style="width:100%;margin-top:14px;background:linear-gradient(135deg,'+p.color+','+p.color+');color:#fff;border:none;border-radius:10px;padding:12px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">Subscribe — $'+p.price.toFixed(2)+'/mo</button>':'')
-      +(!isCurrent&&isTrial&&plan!=='trial'?'':'')
-      +'</div>';
+  const paid=['starter','pro','business'].includes(plan);
+  const current=plan==='start'?'starter':plan;
+  let html=dBackLink('Back','settings')
+    +'<div class="d-topbar"><div><div class="d-title">Subscription &amp; Billing</div><div class="d-shopname">DriveMetrik</div></div></div>';
+  if(plan==='unconfigured'){
+    html+='<div style="background:rgba(251,191,36,.08);border:1.5px solid rgba(251,191,36,.35);border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
+      +'<div style="font-weight:700;color:var(--warn);">Subscription not verified</div>'
+      +'<div style="font-size:12.5px;color:var(--text-mid);margin-top:5px;line-height:1.6;">Sign in to load your shop and its server-verified billing status. Paid access is never granted from a browser setting.</div></div>';
+  }else if(plan==='trial'){
+    html+='<div style="background:rgba(52,211,153,.07);border:1.5px solid rgba(52,211,153,.35);border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
+      +'<div style="font-weight:700;color:var(--success);">Free trial active — '+daysLeft+' day'+(daysLeft===1?'':'s')+' remaining</div>'
+      +'<div style="font-size:12.5px;color:var(--text-mid);margin-top:5px;">Trial dates come from your shop record. No paid subscription is recorded yet.</div></div>';
+  }else{
+    const active=SHOP_PLANS[current];
+    html+='<div style="background:rgba(52,211,153,.07);border:1.5px solid rgba(52,211,153,.35);border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
+      +'<div style="font-weight:700;color:var(--success);">'+(active?active.label:current)+' subscription active</div>'
+      +'<div style="font-size:12.5px;color:var(--text-mid);margin-top:5px;">Plan status is read from your authenticated shop record.</div>'
+      +'<button onclick="manageBilling()" style="margin-top:12px;background:var(--success);color:#06110f;border:none;border-radius:9px;padding:11px 15px;font-size:13px;font-weight:700;cursor:pointer;">Manage Billing in Stripe →</button></div>';
   }
-
-  return dBackLink('Back','settings')
-    +'<div class="d-topbar"><div><div class="d-title">Subscription & Billing</div><div class="d-shopname">DriveMetrik</div></div></div>'
-
-    +'<div style="background:rgba(52,211,153,0.08);border:1.5px solid rgba(52,211,153,0.35);border-radius:14px;padding:16px 18px;margin-bottom:16px;">'
-    +'<div style="font-weight:700;font-size:14.5px;color:var(--success);margin-bottom:4px;">💡 Why the commitment is worth it</div>'
-    +'<div style="font-size:12.5px;color:var(--text-mid);line-height:1.7;">Most shops cover their entire monthly subscription with <strong style="color:var(--text-hi);">a single customer visit</strong> — one oil change or brake job typically pays for the month. Everything after that is what the app is actually earning you: more repeat visits, fewer missed follow-ups, and hours back from paperwork. Rates are locked for the length of your plan\'s commitment term — no surprise increases.</div>'
-    +'</div>'
-
-    +(plan==='trial'&&!trialExpired
-      ?'<div style="background:rgba(52,211,153,0.07);border:1.5px solid rgba(52,211,153,0.35);border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
-        +'<div style="font-weight:700;font-size:14px;color:var(--success);">🆓 Free Trial Active — '+daysLeft+' of '+SHOP_PLANS.trial.days+' days remaining</div>'
-        +'<div style="font-size:12.5px;color:var(--text-mid);margin-top:4px;line-height:1.6;">Full access, no credit card on file. Subscribe before your trial ends to keep your shop data and history.</div>'
-        +'</div>':''
-    )
-    +(trialExpired
-      ?'<div style="background:rgba(248,113,113,0.07);border:1.5px solid rgba(248,113,113,0.35);border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
-        +'<div style="font-weight:700;font-size:14px;color:var(--danger);">⏰ Free Trial Ended</div>'
-        +'<div style="font-size:12.5px;color:var(--text-mid);margin-top:3px;">Subscribe to restore full access and keep all your shop data.</div>'
-        +'</div>':''
-    )
-
-    +(plan==='trial'?'':tierCard('trial',false))
-    +tierCard('starter',plan==='starter'||plan==='start')
-    +tierCard('pro',plan==='pro')
-    +tierCard('business',plan==='business')
-
-    +(plan==='trial'?'<button onclick="shopStartTrial()" style="width:100%;margin:4px 0 16px;background:linear-gradient(135deg,var(--success),#059669);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">🆓 '+(shopTrialDaysLeft()>0?'Trial Already Active':'Restart Free Trial')+'</button>':'')
-
-    +'<div class="d-panel" style="margin-top:8px;">'
-    +'<div class="d-panel-title">🔧 Demo — Switch Plans</div>'
-    +'<div style="font-size:12px;color:var(--text-mid);margin-bottom:12px;">Toggle to test feature gating and upgrade prompts. Connects to real billing in production.</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">'
-    +['trial','starter','pro','business'].map(function(k){return '<button onclick="'+(k==='trial'?'shopStartTrial()':'shopConfirmSubscribe(\''+k+'\')')+'" style="padding:10px 4px;border-radius:9px;background:'+(plan===k?'var(--blue-bright)':'var(--bg-elevated)')+';color:'+(plan===k?'#fff':'var(--text-mid)')+';border:1px solid '+(plan===k?'transparent':'var(--border-subtle)')+';cursor:pointer;font-size:11.5px;font-weight:700;font-family:inherit;">'+k.charAt(0).toUpperCase()+k.slice(1)+'</button>';}).join('')
-    +'</div></div>';
+  ['starter','pro','business'].forEach(function(key){
+    const p=SHOP_PLANS[key];
+    const isCurrent=paid&&current===key;
+    const features=(SHOP_PLAN_FEATURES[key]||[]).map(function(f){
+      return '<div style="font-size:12.5px;color:'+(f.startsWith('⭐')?'var(--orange)':'var(--text-mid)')+';padding:3px 0;display:flex;gap:6px;"><span style="color:var(--success);">✓</span>'+f+'</div>';
+    }).join('');
+    html+='<div style="background:'+(isCurrent?'rgba(52,211,153,.04)':'var(--bg-elevated)')+';border:1.5px solid '+(isCurrent?'var(--success)':'var(--border-subtle)')+';border-radius:16px;padding:18px;margin-bottom:12px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'
+      +'<div><div style="font-weight:700;font-size:15px;color:'+p.color+';">'+(key==='business'?'👑 Business':key==='pro'?'📈 Pro':'🏪 Starter')+(isCurrent?' <span style="font-size:11px;color:var(--success);">✓ Active plan</span>':'')+'</div>'
+      +'<div style="font-size:10.5px;color:var(--text-low);margin-top:3px;">'+shopCommitmentLabel(key)+' · billed monthly</div></div>'
+      +'<div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:'+p.color+';text-align:right;">$'+p.price.toFixed(0)+'<span style="font-size:12px;font-weight:400;color:var(--text-low);">/mo</span></div></div>'
+      +(SHOP_PLAN_PITCH[key]?'<div style="font-size:12px;color:var(--text-mid);line-height:1.6;padding:8px 10px;background:var(--bg-panel);border-radius:8px;margin-bottom:10px;">'+SHOP_PLAN_PITCH[key]+'</div>':'')
+      +features
+      +(isCurrent?'':'<div style="font-size:11px;color:var(--text-low);margin-top:12px;">'+(paid?'Plan changes are not enabled in the billing portal yet; contact DriveMetrik for a tier change.':'Subscribe after signing in as a shop owner or manager.')+'</div>')
+      +(!paid?'<button onclick="subscribeNow(\''+key+'\')" style="width:100%;margin-top:14px;background:linear-gradient(135deg,'+p.color+','+p.color+');color:#fff;border:none;border-radius:10px;padding:12px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">Continue to Stripe — $'+p.price.toFixed(0)+'/mo</button>':'')
+      +'</div>';
+  });
+  html+='<div style="font-size:11px;color:var(--text-low);line-height:1.6;margin:12px 2px;">Payment details are collected on Stripe-hosted Checkout. DriveMetrik does not store card details. A plan activates only after a signed Stripe webhook updates the shop record.</div>';
+  return html;
 }
-
 /* ─── CUSTOMER PLAN FUNCTIONS ───────────────────────────── */
 // Fixed: these previously trusted localStorage('cust-plan'/'cust-premium')
 // directly as proof of a paid plan -- the exact same class of bug already
@@ -27054,7 +27016,11 @@ function dmApplyShop(shop){
   DATA.shop.phone = shop.phone || '';
   DATA.shop.email = shop.email || '';
   if(shop.tax_rate_pct!=null && Number(shop.tax_rate_pct)>0) DATA.shop.taxRatePct = Number(shop.tax_rate_pct);
-  // keep the app's existing local keys in step so screens that read them show the cloud values
+  // Billing state comes only from the authenticated API response.
+  DATA.shop.subscriptionPlan = String(shop.subscription_plan || 'unconfigured').toLowerCase();
+  DATA.shop.subscriptionStatus = String(shop.subscription_status || 'unconfigured').toLowerCase();
+  DATA.shop.trialStartedAt = shop.trial_started_at || null;
+  DATA.shop.trialEndsAt = shop.trial_ends_at || null;
   try{
     localStorage.setItem('shop-name', DATA.shop.name||''); localStorage.setItem('shop-owner', DATA.shop.ownerName||'');
     localStorage.setItem('shop-phone', DATA.shop.phone||''); localStorage.setItem('shop-email', DATA.shop.email||'');

@@ -7461,7 +7461,8 @@ async function subscribeNow(planKey){
     if(typeof showDriveMetrikLoginModal==='function')showDriveMetrikLoginModal('shop');
     return;
   }
-  const accepted=confirm('Subscribe to DriveMetrik '+plan.label+' for $'+plan.price+'/month, billed monthly until canceled? Payment details are entered securely on Stripe Checkout. Continuing records your consent to this recurring monthly subscription.');
+  const commitment=typeof shopCommitmentLabel==='function'?shopCommitmentLabel(planKey):'month-to-month, cancel anytime';
+  const accepted=confirm('Subscribe to DriveMetrik '+plan.label+' for $'+plan.price+'/month. Commitment: '+commitment+'. Payment details are entered securely on Stripe Checkout. Continuing records your consent to this recurring subscription.');
   if(!accepted)return;
   try{
     const result=await dmApi('POST','/api/create-subscription-checkout',{

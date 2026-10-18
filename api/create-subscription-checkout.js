@@ -1,102 +1,100 @@
-// api/create-subscription-checkout.js
-//
-// Real backend for shop owners subscribing to MyGarageAppAI itself (Shop
-// $175/mo or Pro $275/mo) -- distinct from create-checkout-session.js, which
-// handles a SHOP's customer paying THEIR invoice. This one is your own
-// subscription revenue.
-//
-// THE 10% FIRST-MONTH DISCOUNT, DONE THE RIGHT WAY:
-//
-// This uses Stripe's own coupon system with duration: 'once' -- meaning
-// Stripe itself applies the discount to exactly the first invoice, then
-// automatically reverts to full price on every renewal after that. This is
-// NOT something you (or this code) has to remember to "turn off" later --
-// Stripe's subscription billing engine handles the reversion natively. That
-// directly satisfies the requirement that this "does not require manual
-// changes later."
-//
-// SETUP STEPS:
-//   1. In Stripe Dashboard -> Product catalog, create two real Products:
-//        "MyGarageAppAI - Garage Shop" with a recurring Price of $175.00/mo
-//        "MyGarageAppAI - Garage Pro"   with a recurring Price of $275.00/mo
-//      Copy each Price ID (starts with price_...) into the PRICE_IDS map below.
-//   2. In Stripe Dashboard -> Product catalog -> Coupons, create ONE real
-//      coupon: 10% off, duration = "Once". Copy its ID into FIRST_MONTH_COUPON_ID
-//      below. (A single coupon works for both plans -- Stripe applies the
-//      percentage to whichever price the customer is actually subscribing to.)
-//   3. In Vercel -> Settings -> Environment Variables, add:
-//        STRIPE_SECRET_KEY = sk_live_...  (same key used elsewhere)
-//   4. Save this file as api/create-subscription-checkout.js and deploy.
-//   5. Wire the two pricing-page buttons to call this endpoint:
-//        subscribeNow(planKey) with useDiscount=true  -> applies the coupon
-//        A plain "start subscription without the trial" path with
-//        useDiscount=false is also supported below, for completeness.
-
+// Create a recurring DriveMetrik subscription checkout for the authenticated shop.
 import Stripe from 'stripe';
+import { requireUser, requireShop, readBody, sendError } from './_lib/supabase.js';
+import { BILLING_PLANS, normalizePlanKey } from './_lib/billing-plans.js';
 
-// LIVE-MODE values, provided directly by the account owner. These only work
-// with a live (sk_live_...) secret key -- if STRIPE_SECRET_KEY in Vercel is
-// still a test key (sk_test_...), Stripe will reject these with a "No such
-// price"/"No such coupon" error, since live and test mode are entirely
-// separate object spaces in Stripe.
-const PRICE_IDS = {
-  start: 'price_1UAItNEPcevq976KlWhoWkbt', // Garage Shop, $175/mo (live mode)
-  pro:   'price_1UAIvtEPcevq976KdBSF985M', // Garage Pro, $275/mo (live mode)
-};
-
-const FIRST_MONTH_COUPON_ID = 'aqCE5BC7'; // 10% off, duration:"once" (live mode)
+const ACTIVE_SUBSCRIPTION_STATES = new Set(['active', 'trialing', 'past_due', 'unpaid', 'incomplete']);
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) {
-    console.error('STRIPE_SECRET_KEY is not set in Vercel environment variables.');
-    return res.status(500).json({ error: 'Payment service is not configured yet.' });
-  }
-  const stripe = new Stripe(secretKey);
-
-  const { planKey, shopId, shopEmail, useDiscount } = req.body || {};
-  const priceId = PRICE_IDS[planKey];
-  if (!priceId) {
-    return res.status(400).json({ error: 'Unknown plan.' });
-  }
-  if (!shopId) {
-    return res.status(400).json({ error: 'A shop ID is required so the webhook knows whose subscription this is.' });
-  }
-
-  const origin = req.headers.origin || 'https://mygarageappai.com';
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ error: 'Subscription billing is not configured.' });
 
   try {
-    const sessionConfig = {
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      // Real, server-side metadata -- this is what stripe-webhook.js reads to
-      // know which shop to mark as paid/active. Never trust plan info sent
-      // from the client for anything that actually grants access.
-      metadata: { shopId: String(shopId), planKey },
-      subscription_data: { metadata: { shopId: String(shopId), planKey } },
-      success_url: `${origin}/?subscribed=1&plan=${encodeURIComponent(planKey)}`,
-      cancel_url: `${origin}/?subscribeCancelled=1`,
-    };
-    if (shopEmail) sessionConfig.customer_email = shopEmail;
-
-    // The actual discount logic -- one line, because Stripe does the real
-    // work of expiring it after the first cycle. If useDiscount is false
-    // (e.g. someone converting from a completed free trial rather than
-    // skipping straight to a paid plan), this is simply omitted and they're
-    // charged the regular price from day one.
-    if (useDiscount) {
-      sessionConfig.discounts = [{ coupon: FIRST_MONTH_COUPON_ID }];
+    const { db, user } = await requireUser(req);
+    const shopId = await requireShop(db);
+    const body = readBody(req);
+    const planKey = normalizePlanKey(body.planKey);
+    if (!planKey) return res.status(400).json({ error: 'Choose Starter, Pro, or Business.' });
+    if (body.termsAccepted !== true) {
+      return res.status(400).json({ error: 'Please confirm the monthly subscription terms before continuing.' });
     }
 
-    const session = await stripe.checkout.sessions.create(sessionConfig);
-    return res.status(200).json({ url: session.url });
+    const { data: employee, error: employeeError } = await db
+      .from('employees').select('role, active')
+      .eq('user_id', user.id).eq('shop_id', shopId).maybeSingle();
+    if (employeeError) throw employeeError;
+    if (!employee?.active || !['shop_owner', 'manager'].includes(employee.role)) {
+      return res.status(403).json({ error: 'Only a shop owner or manager can change subscription billing.' });
+    }
+
+    const { data: shop, error: shopError } = await db
+      .from('shops')
+      .select('id, name, email, subscription_plan, subscription_status, stripe_customer_id, stripe_subscription_id')
+      .eq('id', shopId).single();
+    if (shopError) throw shopError;
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    if (shop.stripe_subscription_id) {
+      // Do not start a second recurring charge while an existing subscription
+      // still exists, even if the local status is stale.
+      try {
+        const current = await stripe.subscriptions.retrieve(shop.stripe_subscription_id);
+        if (ACTIVE_SUBSCRIPTION_STATES.has(current.status)) {
+          return res.status(409).json({ error: 'This shop already has a subscription. Use Manage Billing to change or cancel it.' });
+        }
+      } catch (err) {
+        if (err?.code !== 'resource_missing') throw err;
+      }
+    }
+
+    const plan = BILLING_PLANS[planKey];
+    const termsVersion = String(body.termsVersion || 'drivemetrik-recurring-v1').slice(0, 100);
+    const { data: consent, error: consentError } = await db
+      .from('plan_consents')
+      .insert({
+        shop_id: shopId,
+        user_id: user.id,
+        plan_key: planKey,
+        price_cents: plan.priceCents,
+        terms_version: termsVersion,
+        details: {
+          price_id: plan.priceId,
+          currency: 'usd',
+          interval: 'month',
+          accepted_via: 'subscription_checkout',
+          commitment_label: plan.commitmentLabel,
+          commitment_months: plan.commitmentMonths,
+          user_agent: String(req.headers['user-agent'] || '').slice(0, 500),
+        },
+      })
+      .select('id').single();
+    if (consentError) throw consentError;
+
+    const metadata = {
+      shopId: String(shopId),
+      planKey,
+      termsVersion,
+      consentId: consent.id,
+    };
+    const sessionParams = {
+      mode: 'subscription',
+      line_items: [{ price: plan.priceId, quantity: 1 }],
+      client_reference_id: String(shopId),
+      metadata,
+      subscription_data: { metadata },
+      success_url: 'https://www.drivemetrik.com/?subscribed=1&session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://www.drivemetrik.com/?subscribeCancelled=1',
+      allow_promotion_codes: true,
+    };
+    if (shop.stripe_customer_id) sessionParams.customer = shop.stripe_customer_id;
+    else if (shop.email || user.email) sessionParams.customer_email = shop.email || user.email;
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    if (!session.url) throw new Error('Stripe did not return a checkout URL.');
+    return res.status(200).json({ url: session.url, plan: planKey, priceCents: plan.priceCents });
   } catch (err) {
-    console.error('Stripe subscription checkout error:', err);
-    return res.status(500).json({ error: 'Could not start the subscription checkout.' });
+    console.error('DriveMetrik subscription checkout failed:', err);
+    if (err?.status) return sendError(res, err);
+    return res.status(502).json({ error: 'Could not start secure checkout. No charge was made; please try again.' });
   }
 }

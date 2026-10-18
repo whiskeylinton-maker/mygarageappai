@@ -1,201 +1,211 @@
-// api/stripe-webhook.js
-//
-// This is the missing piece api/create-subscription-checkout.js's own comments
-// pointed to: after a shop owner completes Stripe Checkout, Stripe calls this
-// endpoint to say "this subscription is now active" (or later, "it was
-// cancelled" / "the renewal payment failed"). Without this file, a completed
-// checkout was a dead end -- money changes hands in Stripe, but nothing in
-// the app ever finds out.
-//
-// THE HONEST LIMIT OF WHAT THIS FILE CAN DO RIGHT NOW:
-// This app has no database yet (SUPABASE_URL is still empty in index.html).
-// So this webhook correctly verifies each event is really from Stripe and
-// correctly figures out which shop and which plan it's about -- but it has
-// nowhere durable to WRITE that down. Every event is logged in detail to
-// Vercel's function logs (Project -> Logs, or the get_runtime_logs tool) so
-// you can see exactly who subscribed to what and reconcile manually for now.
-// The moment Supabase is connected, the single block marked below is where
-// a real `UPDATE shops SET ...` belongs -- everything around it (signature
-// verification, event parsing, figuring out shopId/planKey) is already
-// correct and won't need to change.
-//
-// SETUP STEPS (in addition to STRIPE_SECRET_KEY, which create-checkout-session
-// and create-subscription-checkout already need):
-//   1. Stripe Dashboard -> Developers -> Webhooks -> Add endpoint
-//   2. Endpoint URL: https://mygarageappai.com/api/stripe-webhook
-//   3. Events to send: checkout.session.completed, customer.subscription.updated,
-//      customer.subscription.deleted, invoice.payment_failed
-//   4. Stripe shows you a signing secret (starts with whsec_...) once you save --
-//      copy it into Vercel -> Settings -> Environment Variables as STRIPE_WEBHOOK_SECRET
-//   5. Deploy. Do a real test subscription (or use Stripe's "Send test webhook"
-//      button on the endpoint's page) and check Vercel's logs for this
-//      function to confirm events are arriving and verifying correctly.
-
+// Stripe webhook: verify signatures, deduplicate deliveries, and persist subscription state.
 import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+import { inferPlanKey } from './_lib/billing-plans.js';
 
-// Signature verification needs the exact raw request bytes Stripe signed --
-// if Vercel's default JSON body parser touches it first, the signature check
-// fails even for genuine events. This turns that default parsing off.
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+const ACCESSIBLE_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'incomplete_expired', 'canceled', 'paused']);
+const TERMINAL_STATUSES = new Set(['canceled', 'cancelled', 'incomplete_expired']);
+const supabaseOptions = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
+
+export const config = { api: { bodyParser: false } };
 
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    req.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
+function objectId(value) {
+  return typeof value === 'string' ? value : (value && typeof value.id === 'string' ? value.id : null);
+}
+function safeShopState(shop) {
+  return {
+    subscription_plan: shop.subscription_plan,
+    subscription_status: shop.subscription_status,
+    stripe_customer_id: shop.stripe_customer_id,
+    stripe_subscription_id: shop.stripe_subscription_id,
+  };
+}
+
+async function claimEvent(db, event) {
+  const base = {
+    id: event.id,
+    type: event.type,
+    stripe_created: new Date(event.created * 1000).toISOString(),
+    outcome: 'processing',
+    before_state: null,
+    after_state: null,
+  };
+  const { error } = await db.from('stripe_events').insert(base);
+  if (!error) return { claimed: true };
+  if (error.code !== '23505') throw error;
+
+  const { data: previous, error: readError } = await db
+    .from('stripe_events').select('outcome, received_at').eq('id', event.id).maybeSingle();
+  if (readError) throw readError;
+  if (!previous) throw error;
+  if (previous.outcome === 'processed' || previous.outcome === 'ignored_unhandled' || previous.outcome === 'ignored_stale') {
+    return { claimed: false, outcome: previous.outcome };
+  }
+
+  const retryFailed = previous.outcome === 'error';
+  const staleProcessing = previous.outcome === 'processing' &&
+    Date.now() - new Date(previous.received_at || 0).getTime() > 5 * 60 * 1000;
+  if (retryFailed || staleProcessing) {
+    let q = db.from('stripe_events')
+      .update({ outcome: 'processing', received_at: new Date().toISOString() })
+      .eq('id', event.id).eq('outcome', previous.outcome);
+    if (staleProcessing) q = q.lt('received_at', new Date(Date.now() - 5 * 60 * 1000).toISOString());
+    const { data: claimed, error: claimError } = await q.select('id').maybeSingle();
+    if (claimError) throw claimError;
+    if (claimed) return { claimed: true };
+  }
+  return { claimed: false, outcome: previous.outcome || 'duplicate' };
+}
+
+async function findShop(db, subscription, shopIdHint) {
+  const subscriptionId = subscription.id;
+  const customerId = objectId(subscription.customer);
+  let query = db.from('shops')
+    .select('id, subscription_plan, subscription_status, stripe_customer_id, stripe_subscription_id');
+
+  if (shopIdHint || subscription.metadata?.shopId) {
+    query = query.eq('id', String(shopIdHint || subscription.metadata.shopId));
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+    throw new Error('Subscription metadata refers to a shop that does not exist.');
+  }
+
+  const { data: bySubscription, error: subError } = await query
+    .eq('stripe_subscription_id', subscriptionId).maybeSingle();
+  if (subError) throw subError;
+  if (bySubscription) return bySubscription;
+  if (!customerId) throw new Error('Cannot identify the shop for this subscription event.');
+
+  const { data: customers, error: customerError } = await db
+    .from('shops')
+    .select('id, subscription_plan, subscription_status, stripe_customer_id, stripe_subscription_id')
+    .eq('stripe_customer_id', customerId).limit(2);
+  if (customerError) throw customerError;
+  if (!customers || customers.length !== 1) {
+    throw new Error(customers?.length > 1
+      ? 'Stripe customer ID is linked to more than one shop.'
+      : 'Cannot identify the shop for this subscription event.');
+  }
+  return customers[0];
+}
+
+async function persistSubscription(db, subscription, shopIdHint) {
+  const status = String(subscription.status || '').toLowerCase();
+  if (!ACCESSIBLE_STATUSES.has(status)) throw new Error('Stripe returned an unrecognized subscription status.');
+  const planKey = inferPlanKey(subscription);
+  if (!planKey) throw new Error('Subscription uses a price ID that is not part of the DriveMetrik catalog.');
+
+  const shop = await findShop(db, subscription, shopIdHint);
+  const subscriptionId = subscription.id;
+  const customerId = objectId(subscription.customer);
+  const currentId = shop.stripe_subscription_id;
+  const currentStatus = String(shop.subscription_status || '').toLowerCase();
+
+  // Out-of-order events from an old subscription must never replace a newer,
+  // still-live subscription already attached to the shop.
+  if (currentId && currentId !== subscriptionId && !TERMINAL_STATUSES.has(currentStatus)) {
+    return {
+      outcome: 'ignored_stale',
+      shopId: shop.id,
+      before: safeShopState(shop),
+      after: safeShopState(shop),
+      reason: 'A different non-terminal subscription is already linked.',
+    };
+  }
+  if (currentId === subscriptionId && shop.stripe_customer_id && customerId &&
+      shop.stripe_customer_id !== customerId) {
+    throw new Error('Subscription customer does not match the customer already linked to this shop.');
+  }
+
+  const values = {
+    subscription_plan: planKey,
+    subscription_status: status,
+    stripe_customer_id: customerId || shop.stripe_customer_id,
+    stripe_subscription_id: subscriptionId,
+  };
+  const { data: after, error } = await db.from('shops').update(values).eq('id', shop.id)
+    .select('id, subscription_plan, subscription_status, stripe_customer_id, stripe_subscription_id').single();
+  if (error) throw error;
+  return { outcome: 'processed', shopId: shop.id, before: safeShopState(shop), after: safeShopState(after) };
+}
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const stripeSecret = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secretKey || !webhookSecret) {
-    console.error('stripe-webhook: missing STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET env var.');
-    // Still 500 here (not a Stripe-facing concern yet, this is a deploy
-    // misconfiguration) -- Stripe will retry, which is fine once fixed.
-    return res.status(500).json({ error: 'Webhook not configured yet.' });
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!stripeSecret || !webhookSecret || !supabaseUrl || !serviceKey) {
+    console.error('stripe-webhook: required Stripe/Supabase environment variables are missing.');
+    return res.status(500).json({ error: 'Webhook is not configured.' });
   }
-  const stripe = new Stripe(secretKey);
 
   let event;
   try {
-    const rawBody = await readRawBody(req);
-    const signature = req.headers['stripe-signature'];
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-  } catch (err) {
-    // A bad signature means this request did NOT genuinely come from Stripe --
-    // reject it rather than trust anything in the body.
-    console.error('stripe-webhook: signature verification failed:', err.message);
-    return res.status(400).send(`Webhook signature verification failed: ${err.message}`);
+    const stripe = new Stripe(stripeSecret);
+    const raw = await readRawBody(req);
+    event = stripe.webhooks.constructEvent(raw, req.headers['stripe-signature'], webhookSecret);
+  } catch (error) {
+    console.error('stripe-webhook: signature verification failed:', error.message);
+    return res.status(400).json({ error: 'Webhook signature verification failed.' });
   }
 
+  const stripe = new Stripe(stripeSecret);
+  const db = createClient(supabaseUrl, serviceKey, supabaseOptions);
+  let claim;
   try {
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        if (session.mode === 'subscription') {
-          const shopId = session.metadata?.shopId;
-          const planKey = session.metadata?.planKey;
-          const subscriptionId = session.subscription;
-          const customerId = session.customer;
+    claim = await claimEvent(db, event);
+    if (!claim.claimed) return res.status(200).json({ received: true, duplicate: true });
 
-          console.log('SUBSCRIPTION STARTED', {
-            shopId,
-            planKey,
-            subscriptionId,
-            customerId,
-            customerEmail: session.customer_details?.email,
-          });
-
-          // ---- REAL DATABASE WRITE GOES HERE ONCE SUPABASE IS CONNECTED ----
-          // await supabase.from('shops').update({
-          //   plan: planKey,
-          //   subscription_status: 'active',
-          //   stripe_customer_id: customerId,
-          //   stripe_subscription_id: subscriptionId,
-          // }).eq('id', shopId);
-          // -------------------------------------------------------------------
-        }
-        break;
+    let result = { outcome: 'ignored_unhandled', shopId: null, before: null, after: null };
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      if (session.mode === 'subscription' && objectId(session.subscription)) {
+        const subscriptionId = objectId(session.subscription);
+        const subscription = typeof session.subscription === 'object'
+          ? session.subscription
+          : await stripe.subscriptions.retrieve(subscriptionId);
+        result = await persistSubscription(db, subscription, session.metadata?.shopId || session.client_reference_id);
       }
-
-      case 'customer.subscription.created': {
-        const subscription = event.data.object;
-        console.log('SUBSCRIPTION CREATED (Stripe object)', {
-          shopId: subscription.metadata?.shopId,
-          planKey: subscription.metadata?.planKey,
-          status: subscription.status,
-          subscriptionId: subscription.id,
-        });
-        // Usually checkout.session.completed above is the more useful signal
-        // (it also has the Checkout Session's customer email/details), but
-        // Stripe fires this one too -- logged for completeness/reconciliation.
-        break;
+    } else if (event.type.startsWith('customer.subscription.')) {
+      const subscription = event.data.object;
+      result = await persistSubscription(db, subscription, subscription.metadata?.shopId || null);
+    } else if (event.type === 'invoice.payment_failed' || event.type === 'invoice.payment_succeeded' || event.type === 'invoice.paid') {
+      const invoice = event.data.object;
+      const subscriptionId = objectId(invoice.subscription);
+      if (subscriptionId) {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        result = await persistSubscription(db, subscription, subscription.metadata?.shopId || null);
       }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const shopId = subscription.metadata?.shopId;
-        const planKey = subscription.metadata?.planKey;
-
-        console.log('SUBSCRIPTION UPDATED', {
-          shopId,
-          planKey,
-          status: subscription.status, // active, past_due, unpaid, canceled, trialing, etc.
-          subscriptionId: subscription.id,
-        });
-
-        // ---- REAL DATABASE WRITE GOES HERE ONCE SUPABASE IS CONNECTED ----
-        // await supabase.from('shops').update({
-        //   subscription_status: subscription.status,
-        // }).eq('id', shopId);
-        // -------------------------------------------------------------------
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const shopId = subscription.metadata?.shopId;
-
-        console.log('SUBSCRIPTION CANCELLED', {
-          shopId,
-          subscriptionId: subscription.id,
-        });
-
-        // ---- REAL DATABASE WRITE GOES HERE ONCE SUPABASE IS CONNECTED ----
-        // await supabase.from('shops').update({
-        //   subscription_status: 'cancelled',
-        // }).eq('id', shopId);
-        // -------------------------------------------------------------------
-        break;
-      }
-
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        console.log('SUBSCRIPTION PAYMENT SUCCEEDED', {
-          customerId: invoice.customer,
-          subscriptionId: invoice.subscription,
-          amountPaid: invoice.amount_paid, // cents
-          billingReason: invoice.billing_reason, // 'subscription_create', 'subscription_cycle', etc.
-        });
-        // Useful mainly for renewals (billing_reason: 'subscription_cycle') --
-        // the initial payment is already covered by checkout.session.completed.
-        break;
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object;
-        console.log('SUBSCRIPTION PAYMENT FAILED', {
-          customerId: invoice.customer,
-          subscriptionId: invoice.subscription,
-          attemptCount: invoice.attempt_count,
-        });
-        // Once email is connected: this is where a "your payment failed,
-        // please update your card" email would be triggered.
-        break;
-      }
-
-      default:
-        // Unhandled event types are fine to ignore -- just don't error on them.
-        console.log(`stripe-webhook: received unhandled event type ${event.type}`);
     }
 
-    // Acknowledge receipt. Stripe retries on non-2xx for a while, which
-    // would be pointless here since the failure (no database) won't resolve
-    // itself on retry -- logging clearly and returning 200 is the honest
-    // choice until Supabase is wired in.
-    return res.status(200).json({ received: true });
-  } catch (err) {
-    console.error('stripe-webhook: error handling event:', err);
-    return res.status(500).json({ error: 'Error processing webhook event.' });
+    const { error: auditError } = await db.from('stripe_events').update({
+      outcome: result.outcome,
+      shop_id: result.shopId || null,
+      before_state: result.before || null,
+      after_state: result.after ? { ...result.after, reason: result.reason || null } : null,
+    }).eq('id', event.id);
+    if (auditError) throw auditError;
+    return res.status(200).json({ received: true, outcome: result.outcome });
+  } catch (error) {
+    console.error('stripe-webhook: event processing failed:', event.id, event.type, error.message || error);
+    try {
+      await db.from('stripe_events').update({
+        outcome: 'error',
+        after_state: { error: String(error.message || 'Processing failed').slice(0, 500) },
+      }).eq('id', event.id);
+    } catch (auditError) {
+      console.error('stripe-webhook: could not record processing failure:', auditError.message || auditError);
+    }
+    return res.status(500).json({ error: 'Webhook processing failed; Stripe may retry this event.' });
   }
 }

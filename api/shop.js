@@ -3,7 +3,7 @@
 // PATCH /api/shop  { name?, phone?, address?, email?, taxRatePct?, ownerName? } -> owner/manager only (RLS);
 //                  plan/subscription columns are not client-writable (column grants).
 import { requireUser, requireShop, readBody, sendError } from './_lib/supabase.js';
-const COLS = 'id, name, address, phone, email, owner_name, tax_rate_pct, subscription_plan, subscription_status, created_at';
+const COLS = 'id, name, address, phone, email, owner_name, tax_rate_pct, subscription_plan, subscription_status, trial_started_at, trial_ends_at, created_at';
 const txt = (v) => { const s = String(v ?? '').trim(); return s ? s : null; };
 export default async function handler(req, res) {
   try {

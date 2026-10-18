@@ -33,14 +33,14 @@ export function normalizePlanKey(value) {
 }
 
 export function inferPlanKey(subscription) {
-  const metadataPlan = normalizePlanKey(subscription?.metadata?.planKey);
-  if (metadataPlan) return metadataPlan;
+  // The recurring Stripe price is authoritative. Metadata is a fallback for
+  // older subscriptions only; it must never override the price actually billed.
   const items = subscription?.items?.data || [];
   for (const item of items) {
     const priceId = typeof item?.price === 'string' ? item.price : item?.price?.id;
     if (priceId && PRICE_TO_PLAN[priceId]) return PRICE_TO_PLAN[priceId];
   }
-  return null;
+  return normalizePlanKey(subscription?.metadata?.planKey);
 }
 
 export function isSubscriptionAccessStatus(status) {

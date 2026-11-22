@@ -1,0 +1,215 @@
+<!-- DM-COMMAND-CENTER v1: Owner Command Center (live activity, red/yellow/green payment monitor, shop drill-down) inside the existing Owner Analytics screen, plus the live-activity heartbeat every signed-in user sends. The server decides who may see owner data. -->
+<style id="dm-cc-css">
+.dmcc-dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:6px;flex:none}
+.dmcc-green{background:#22c55e}.dmcc-yellow{background:#f59e0b}.dmcc-red{background:#ef4444}.dmcc-gray{background:#6b7280}
+.dmcc-tag{display:inline-flex;align-items:center;gap:0;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--border-mid);white-space:nowrap}
+.dmcc-tag.green{color:#22c55e;border-color:rgba(34,197,94,.5)}.dmcc-tag.yellow{color:#f59e0b;border-color:rgba(245,158,11,.5)}.dmcc-tag.red{color:#ef4444;border-color:rgba(239,68,68,.55)}.dmcc-tag.gray{color:var(--text-low)}
+.dmcc-legend{font-size:11.5px;color:var(--text-low);margin:-4px 0 10px;line-height:1.6}
+.dmcc-legend b{color:var(--text-hi)}
+.dmcc-mono{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--text-low)}
+.dmcc-kpi .v.dmcc-na{font-size:14px;color:var(--text-low)}
+.dmcc-card-red{border-color:rgba(239,68,68,.55)!important}.dmcc-card-yellow{border-color:rgba(245,158,11,.55)!important}
+.dmcc-link{color:var(--blue-bright,#3b82f6);cursor:pointer;text-decoration:none;font-weight:700}
+.dmcc-link:hover{text-decoration:underline}
+.dmcc-ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
+.dmcc-modal{background:var(--bg-panel);border:1px solid var(--border-subtle);border-radius:14px;max-width:920px;width:100%;padding:18px;margin:auto 0}
+.dmcc-kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 14px;margin:6px 0 12px}
+.dmcc-kv div{font-size:12.5px;color:var(--text-hi)}.dmcc-kv b{display:block;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-low);font-weight:600}
+@media (max-width:640px){.dmo-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.dmcc-modal{padding:12px}.dmo-tbl{font-size:12px}.dmo-tbl th,.dmo-tbl td{padding:6px}}
+</style>
+<script id="dm-cc-js">
+(function(){
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); };
+  var money=function(c){ return c==null?'—':'$'+((Number(c)||0)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var day=function(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch(e){ return '—'; } };
+  var dt=function(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return '—'; } };
+  var D=null, P=null, pAt=0, pErr=null, offset=0, showOffline=false, billFilter='', timer=null, openShopId=null, POLL_MS=20000, STALE_MS=90000;
+  var RANK={active:3,idle:2,offline:1};
+  var ACT={active:['green','Active now'],idle:['yellow','Idle'],offline:['red','Offline'],unknown:['gray','Unknown']};
+  function ago(iso){ if(!iso) return '—'; var s=Math.max(0,Math.round((Date.now()+offset-new Date(iso))/1000)); if(s<60) return s+'s ago'; if(s<3600) return Math.round(s/60)+' min ago'; if(s<86400) return Math.round(s/3600)+' h ago'; return day(iso); }
+  function stale(){ return !P || !P.available || pErr || (Date.now()-pAt)>STALE_MS; }
+  function stat(s){ return stale()?'unknown':s; }
+  function tag(color,label,title){ return '<span class="dmcc-tag '+color+'"'+(title?' title="'+esc(title)+'"':'')+'><span class="dmcc-dot dmcc-'+color+'"></span>'+esc(label)+'</span>'; }
+  function setPresence(p){ P=p; pAt=Date.now(); pErr=null; if(p && p.serverNow) offset=new Date(p.serverNow)-Date.now(); }
+  // ---- people: one entry per user, best status across all of their tabs/devices ----
+  function people(){
+    var by={}, users=(D&&D.users)||[], sess=(P&&P.available&&P.sessions)||[];
+    users.forEach(function(u){ by[u.userId]={userId:u.userId,email:u.email,name:null,role:u.role,shopId:u.shopId,lastSignInAt:u.lastSignInAt,sessions:[],status:'offline'}; });
+    sess.forEach(function(s){ var p=by[s.userId]||(by[s.userId]={userId:s.userId,email:s.email,role:s.role,shopId:s.shopId,lastSignInAt:s.lastSignInAt,sessions:[],status:'offline'});
+      p.name=p.name||s.name; p.shopId=p.shopId||s.shopId; p.shopName=s.shopName; p.sessions.push(s); if(RANK[s.status]>RANK[p.status]) p.status=s.status; });
+    return Object.keys(by).map(function(k){ var p=by[k]; p.sessions.sort(function(a,b){ return (RANK[b.status]-RANK[a.status])||(new Date(b.lastSeenAt)-new Date(a.lastSeenAt)); }); p.top=p.sessions[0]||null; return p; });
+  }
+  function shopName(id){ var s=((D&&D.shops)||[]).find(function(x){return x.id===id;}); return s?s.name:'—'; }
+  function onlineCounts(){ var ps=people(), a=0,i=0, shops={}; ps.forEach(function(p){ if(p.status==='active') a++; else if(p.status==='idle') i++; else return; if(p.shopId) shops[p.shopId]=1; }); return {active:a,idle:i,total:a+i,shops:Object.keys(shops).length}; }
+  function accounts(){ return (D&&D.billing&&D.billing.accounts&&D.billing.accounts.rows)||[]; }
+  function accountFor(shopId){ return accounts().find(function(r){ return r.shopId===shopId; })||null; }
+  // ---- KPI strip ----
+  function kpis(){
+    var b=(D&&D.billing)||{}, ok=b.available===true, acc=b.accounts||{}, c=acc.counts||null, shops=(D&&D.shops)||[], fb=(D&&D.feedback)||[];
+    var reg=shops.filter(function(s){return !s.internal&&!s.isTest;}).length, other=shops.length-reg, oc=onlineCounts();
+    var na='<span class="dmcc-na">Unavailable</span>';
+    var card=function(k,v,s,cls,id){ return '<div class="dmo-card dmcc-kpi '+(cls||'')+'"'+(id?' id="'+id+'"':'')+'><div class="k">'+k+'</div><div class="v'+(v===na?' dmcc-na':'')+'">'+v+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>'; };
+    var isMonth=!(D&&D._range&&(D._range.from||D._range.to));
+    var openFb=fb.filter(function(x){return x.status==='new';}).length, revFb=fb.filter(function(x){return x.status==='reviewed';}).length;
+    return '<div class="dmo-grid" id="dmcc_kpis">'
+      +card('Registered shops',reg,other?other+' internal / test not counted':'')
+      +card('Active paying shops',ok&&c?c.payingShops:na,ok&&c?'Stripe active (past due counted separately)':esc(b.reason||''))
+      +'<div id="dmcc_kpi_online" style="display:contents">'+onlineCard()+'</div>'
+      +card('Monthly recurring revenue',ok?money(b.mrrCents):na,ok?'active + past-due paid plans':'')
+      +card(isMonth?'Collected this month':'Collected (selected dates)',ok?money(b.collectedCents):na,ok?(b.payments||0)+' payment'+(b.payments===1?'':'s')+' · '+money(b.netCollectedCents)+' after refunds':'')
+      +card('Due in next 7 days',ok&&c?c.upcoming7d:na,ok&&c?money(c.upcoming7dCents)+' scheduled renewals / trial ends':'',ok&&c&&c.upcoming7d?'dmcc-card-yellow':'')
+      +card('Failed or overdue',ok&&c?c.failedOrOverdue:na,ok&&c?'needs attention':'',ok&&c&&c.failedOrOverdue?'dmcc-card-red':'')
+      +card(isMonth?'New subscriptions this month':'New subscriptions (dates)',ok&&c?c.newSubscriptions:na)
+      +card(isMonth?'Cancellations this month':'Cancellations (dates)',ok&&c?c.cancellations:na,ok&&c&&c.scheduledCancellations?c.scheduledCancellations+' more scheduled to end':'')
+      +'<div class="dmo-card dmcc-kpi" style="cursor:pointer" onclick="var e=document.getElementById(\'dmo_fb\');if(e)e.scrollIntoView({behavior:\'smooth\'})"><div class="k">Open complaints &amp; messages</div><div class="v">'+openFb+'</div><div class="s">'+(revFb?revFb+' reviewed, not closed · ':'')+'view board ↓</div></div>'
+      +'</div>';
+  }
+  function onlineCard(){
+    if(stale()) return '<div class="dmo-card dmcc-kpi"><div class="k">Online right now</div><div class="v dmcc-na">Unavailable</div><div class="s">'+esc((P&&P.reason)||pErr||'waiting for live data')+'</div></div>';
+    var o=onlineCounts(); return '<div class="dmo-card dmcc-kpi"><div class="k">Online right now</div><div class="v">'+o.total+'</div><div class="s"><span class="dmcc-dot dmcc-green"></span>'+o.active+' active · <span class="dmcc-dot dmcc-yellow"></span>'+o.idle+' idle · '+o.shops+' shop'+(o.shops===1?'':'s')+'</div></div>';
+  }
+  // ---- live activity ----
+  function liveHtml(){
+    var th=(P&&P.thresholds)||{offlineAfterSeconds:150,idleAfterSeconds:300};
+    var h='<div class="dmcc-legend"><b>Thresholds:</b> '+tag('green','Active now')+' heartbeat within '+Math.round(th.offlineAfterSeconds/60*10)/10+' min <b>and</b> keyboard, mouse or touch within '+Math.round(th.idleAfterSeconds/60)+' min · '
+      +tag('yellow','Idle')+' signed in, browser open, no input for '+Math.round(th.idleAfterSeconds/60)+'+ min · '+tag('red','Offline')+' no heartbeat for '+Math.round(th.offlineAfterSeconds/60*10)/10+'+ min (tab closed, connection lost, session expired) or signed out. '
+      +'A valid login alone never counts as online. Each tab / device is tracked separately; a person shows their most active device. Refreshes every '+(POLL_MS/1000)+' s.</div>';
+    if(!P) return h+'<div class="dmo-warn">Loading live activity…</div>';
+    if(!P.available) return h+'<div class="dmo-warn"><b>Live activity is unavailable.</b> '+esc(P.reason||'')+'</div>';
+    if(stale()) h+='<div class="dmo-warn"><b>Live activity is out of date.</b> Last update '+esc(ago(new Date(pAt-offset).toISOString()))+(pErr?' ('+esc(pErr)+')':'')+'. Statuses are shown as unknown, not online, until it reconnects.</div>';
+    var ps=people().filter(function(p){ return p.sessions.length && (showOffline || stat(p.status)!=='offline'); });
+    var groups={}; ps.forEach(function(p){ var k=p.shopId||'none'; (groups[k]=groups[k]||[]).push(p); });
+    var keys=Object.keys(groups).sort(function(a,b){ var on=function(k){return groups[k].filter(function(p){return p.status!=='offline';}).length;}; return on(b)-on(a); });
+    h+='<div class="dmo-bar"><label style="font-size:12px;color:var(--text-low)"><input type="checkbox" '+(showOffline?'checked':'')+' onchange="dmCC.toggleOffline(this.checked)"> Show people who went offline in the last 24 h</label><span class="dmcc-mono">updated '+esc(ago(new Date(pAt-offset).toISOString()))+'</span></div>';
+    if(!keys.length) return h+'<div class="dmo-wrap" style="padding:14px;color:var(--text-low);font-size:12.5px">Nobody is using DriveMetrik right now.'+(showOffline?'':' Tick the box to see who was on in the last 24 h.')+'</div>';
+    h+='<div class="dmo-wrap"><table class="dmo-tbl"><tr><th>Shop</th><th>Status</th><th>Person</th><th>Role</th><th>Signed in</th><th>Last activity</th><th>Using</th><th>Device</th></tr>';
+    keys.forEach(function(k){ var g=groups[k], on=g.filter(function(p){return stat(p.status)!=='offline'&&stat(p.status)!=='unknown';}).length;
+      g.forEach(function(p,i){ var t=p.top||{}, a=ACT[stat(p.status)];
+        h+='<tr>'+(i===0?'<td rowspan="'+g.length+'" style="white-space:nowrap">'+(k==='none'?'<span style="color:var(--text-low)">No shop</span>':'<a class="dmcc-link" onclick="dmCC.openShop(\''+esc(k)+'\')">'+esc(shopName(k)||t.shopName)+'</a>')+'<div class="dmcc-mono">'+on+' online now</div></td>':'')
+          +'<td>'+tag(a[0],a[1])+'</td><td><b>'+esc(p.name||p.email)+'</b><div class="dmcc-mono">'+esc(p.email)+'</div></td><td>'+esc(p.role||'—')+'</td>'
+          +'<td style="white-space:nowrap">'+dt(t.startedAt)+(p.lastSignInAt?'<div class="dmcc-mono">login '+dt(p.lastSignInAt)+'</div>':'')+'</td>'
+          +'<td style="white-space:nowrap">'+(t.lastActiveAt?ago(t.lastActiveAt):'no input yet')+'<div class="dmcc-mono">seen '+ago(t.lastSeenAt)+'</div></td>'
+          +'<td>'+esc(t.page||'—')+'</td><td>'+esc(t.device||'—')+(p.sessions.length>1?'<div class="dmcc-mono">'+p.sessions.filter(function(s){return s.status!=='offline';}).length+' of '+p.sessions.length+' devices live</div>':'')+'</td></tr>'; }); });
+    return h+'</table></div>';
+  }
+  // ---- payment monitor ----
+  function monitorHtml(){
+    var b=(D&&D.billing)||{}, rows=accounts(), ps=people(), byShop={};
+    ps.forEach(function(p){ if(!p.shopId) return; var s=stat(p.status); var x=byShop[p.shopId]||(byShop[p.shopId]={active:0,idle:0}); if(s==='active') x.active++; else if(s==='idle') x.idle++; });
+    var h='<div class="dmcc-legend"><b>Billing:</b> '+tag('green','Paid')+' active, nothing due within 7 days · '+tag('yellow','Attention')+' renewal or trial end within 7 days, scheduled cancellation, or an open invoice · '
+      +tag('red','Problem')+' payment failed, past due, overdue or access suspended · '+tag('gray','Not billed')+' complimentary, internal/test, canceled, or Stripe data unavailable. <b>A shop is never shown green unless live Stripe data says so.</b> Activity and billing are separate: a shop can be offline and fully paid.</div>';
+    if(!b.available) h+='<div class="dmo-warn"><b>Billing data is unavailable.</b> '+esc(b.reason||'')+' Every billing status below is gray until Stripe can be read.</div>';
+    else if(b.accountsError) h+='<div class="dmo-warn">'+esc(b.accountsError)+'</div>';
+    var counts={green:0,yellow:0,red:0,gray:0}; rows.forEach(function(r){ counts[r.color]=(counts[r.color]||0)+1; });
+    h+='<div class="dmo-bar"><select onchange="dmCC.filter(this.value)"><option value="">All billing statuses ('+rows.length+')</option>'+['red','yellow','green','gray'].map(function(c){ return '<option value="'+c+'"'+(billFilter===c?' selected':'')+'>'+{red:'Red: problems',yellow:'Yellow: due soon / attention',green:'Green: paid',gray:'Gray: not billed / unavailable'}[c]+' ('+counts[c]+')</option>'; }).join('')+'</select></div>';
+    var order={red:0,yellow:1,green:2,gray:3};
+    var list=rows.filter(function(r){ return !billFilter||r.color===billFilter; }).sort(function(a,b){ return (order[a.color]-order[b.color])||((a.daysUntilDue==null?999:a.daysUntilDue)-(b.daysUntilDue==null?999:b.daysUntilDue)); });
+    h+='<div class="dmo-wrap"><table class="dmo-tbl"><tr><th>Shop &amp; contact</th><th>Activity</th><th>Billing</th><th>Stripe status</th><th>Package</th><th>Monthly</th><th>Last paid</th><th>Next billing</th><th>Days</th><th>Outstanding</th><th>Cancels / canceled</th></tr>';
+    list.forEach(function(r){ var x=r.shopId?byShop[r.shopId]||{active:0,idle:0}:null;
+      var act=!r.shopId?'—':stale()?tag('gray','Unknown'):x.active?tag('green',x.active+' active'+(x.idle?' · '+x.idle+' idle':'')):x.idle?tag('yellow',x.idle+' idle'):tag('red','Offline');
+      var days=r.daysUntilDue==null?'—':r.daysUntilDue<0?'<b style="color:#ef4444">'+(-r.daysUntilDue)+' overdue</b>':r.daysUntilDue===0?'today':r.daysUntilDue;
+      h+='<tr><td>'+(r.shopId?'<a class="dmcc-link" onclick="dmCC.openShop(\''+esc(r.shopId)+'\')">'+esc(r.shopName)+'</a>':'<b>'+esc(r.shopName)+'</b> <span class="dmo-pill">not linked to a shop</span>')+'<div class="dmcc-mono">'+esc(r.contactEmail||'—')+(r.contactPhone?' · '+esc(r.contactPhone):'')+'</div></td>'
+        +'<td>'+act+'</td><td>'+tag(r.color,r.label,r.detail)+(r.detail?'<div class="dmcc-mono">'+esc(r.detail)+'</div>':'')+'</td><td class="dmcc-mono">'+esc(r.stripeStatus)+'</td>'
+        +'<td>'+esc(r.plan||'—')+'</td><td>'+(r.monthlyCents==null?'—':money(r.monthlyCents))+'</td>'
+        +'<td style="white-space:nowrap">'+(r.lastPaymentAt?day(r.lastPaymentAt)+'<div class="dmcc-mono">'+money(r.lastPaymentCents)+'</div>':'—')+'</td>'
+        +'<td style="white-space:nowrap">'+day(r.nextBillingAt)+'</td><td>'+days+'</td><td>'+(r.outstandingCents==null?'—':r.outstandingCents?'<b style="color:#ef4444">'+money(r.outstandingCents)+'</b>':money(0))+'</td>'
+        +'<td style="white-space:nowrap">'+(r.canceledAt?'Ended '+day(r.canceledAt):r.cancelAt?'Ends '+day(r.cancelAt):'—')+'</td></tr>'; });
+    if(!list.length) h+='<tr><td colspan="11" style="color:var(--text-low)">No shops match.</td></tr>';
+    return h+'</table></div>';
+  }
+  // ---- shop drill-down ----
+  function shopHtml(id){
+    var s=((D&&D.shops)||[]).find(function(x){return x.id===id;}); if(!s) return '<div>Shop not found.</div>';
+    var r=accountFor(id), ps=people().filter(function(p){return p.shopId===id;}), fb=((D&&D.feedback)||[]).filter(function(x){return x.shopId===id;});
+    var kv=function(k,v){ return '<div><b>'+k+'</b>'+(v==null||v===''?'—':v)+'</div>'; };
+    var h='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:800;font-size:17px;color:var(--text-hi)">'+esc(s.name)+'</div><button class="btn btn-secondary btn-sm" onclick="dmCC.closeShop()">✕ Close</button></div>';
+    h+='<div class="dmo-h">Membership</div><div class="dmcc-kv">'+kv('Plan',esc(s.plan))+kv('App status',esc(s.status))+kv('Signed up',day(s.createdAt))+kv('Trial ends',day(s.trialEndsAt))
+      +kv('Account type',esc(s.isTest?'Test':s.internal?'Internal (owner)':s.complimentary?'Complimentary':'Customer'))+kv('Contact',esc(s.ownerEmail||s.shopEmail||'—')+(s.phone?'<br>'+esc(s.phone):''))+kv('Shop id','<span class="dmcc-mono">'+esc(s.id)+'</span>')+'</div>';
+    h+='<div class="dmo-h">Billing</div>';
+    if(!r) h+='<div class="dmo-warn">No billing record.</div>';
+    else h+='<div style="margin:4px 0 8px">'+tag(r.color,r.label)+' <span class="dmcc-mono">Stripe: '+esc(r.stripeStatus)+'</span>'+(r.detail?'<div class="dmcc-mono" style="margin-top:4px">'+esc(r.detail)+'</div>':'')+'</div><div class="dmcc-kv">'
+      +kv('Monthly price',r.monthlyCents==null?'—':money(r.monthlyCents))+kv('Last successful payment',r.lastPaymentAt?day(r.lastPaymentAt)+' · '+money(r.lastPaymentCents):'—')+kv('Next billing date',day(r.nextBillingAt))
+      +kv('Days until due',r.daysUntilDue==null?'—':r.daysUntilDue<0?(-r.daysUntilDue)+' days overdue':r.daysUntilDue)+kv('Outstanding balance',r.outstandingCents==null?'—':money(r.outstandingCents))
+      +kv('Cancellation',r.canceledAt?'Ended '+day(r.canceledAt):r.cancelAt?'Scheduled '+day(r.cancelAt):'—')
+      +kv('Stripe ids','<span class="dmcc-mono">'+esc(r.stripeCustomerId||'—')+'<br>'+esc(r.subscriptionId||'—')+'</span>')+'</div>'
+      +(r.stripeCustomerId?'<a class="dmcc-link" href="https://dashboard.stripe.com/customers/'+encodeURIComponent(r.stripeCustomerId)+'" target="_blank" rel="noopener noreferrer">Open in Stripe ↗</a>':'');
+    var on=ps.filter(function(p){ var x=stat(p.status); return x==='active'||x==='idle'; }).length;
+    h+='<div class="dmo-h">Activity ('+on+' of '+ps.length+' people online now)</div><div class="dmo-wrap"><table class="dmo-tbl"><tr><th>Status</th><th>Person</th><th>Role</th><th>Last sign-in</th><th>Last activity</th><th>Using</th><th>Devices</th></tr>'
+      +(ps.length?ps.sort(function(a,b){return RANK[b.status]-RANK[a.status];}).map(function(p){ var t=p.top||{}, a=ACT[p.sessions.length?stat(p.status):(stale()?'unknown':'offline')];
+        return '<tr><td>'+tag(a[0],a[1])+'</td><td><b>'+esc(p.name||p.email)+'</b><div class="dmcc-mono">'+esc(p.email)+'</div></td><td>'+esc(p.role||'—')+'</td><td>'+dt(p.lastSignInAt)+'</td><td>'+(t.lastActiveAt?ago(t.lastActiveAt):t.lastSeenAt?'seen '+ago(t.lastSeenAt):'no activity in 24 h')+'</td><td>'+esc(t.page||'—')+'</td><td>'+(p.sessions.length?p.sessions.map(function(x){return esc(x.device||'?')+' ('+esc(x.status)+')';}).join('<br>'):'—')+'</td></tr>'; }).join('')
+        :'<tr><td colspan="7" style="color:var(--text-low)">No user accounts at this shop.</td></tr>')+'</table></div>';
+    var stl={'new':'Open',reviewed:'Reviewed',closed:'Resolved'};
+    h+='<div class="dmo-h">Support history ('+fb.length+')</div><div class="dmo-wrap"><table class="dmo-tbl"><tr><th>Received</th><th>Type</th><th>Message</th><th>Status</th><th></th></tr>'
+      +(fb.length?fb.map(function(x){ return '<tr><td style="white-space:nowrap">'+dt(x.createdAt)+'<div class="dmcc-mono">'+esc(x.fromEmail||'')+'</div></td><td>'+esc(x.kind)+(x.rating?' · '+x.rating+'★':'')+'</td><td style="max-width:340px;white-space:pre-wrap">'+esc(x.body)+'</td><td><span class="dmo-pill">'+esc(stl[x.status]||x.status)+'</span></td><td style="white-space:nowrap">'
+        +(x.status==='new'?'<button class="btn btn-secondary btn-sm" onclick="dmCC.fb(\''+esc(x.id)+'\',\'reviewed\')">Mark reviewed</button> ':'')+(x.status!=='closed'?'<button class="btn btn-secondary btn-sm" onclick="dmCC.fb(\''+esc(x.id)+'\',\'closed\')">Resolve</button>':'<button class="btn btn-secondary btn-sm" onclick="dmCC.fb(\''+esc(x.id)+'\',\'new\')">Reopen</button>')+'</td></tr>'; }).join('')
+        :'<tr><td colspan="5" style="color:var(--text-low)">No complaints or messages from this shop.</td></tr>')+'</table></div>';
+    return h;
+  }
+  function paintShop(){ var m=document.getElementById('dmcc_shop_modal'); if(m&&openShopId) m.innerHTML=shopHtml(openShopId); }
+  function refreshLive(){ var a=document.getElementById('dmcc_live'); if(a) a.innerHTML=liveHtml(); var b=document.getElementById('dmcc_kpi_online'); if(b) b.innerHTML=onlineCard(); var c=document.getElementById('dmcc_monitor'); if(c) c.innerHTML=monitorHtml(); paintShop(); }
+  function onScreen(){ try{ return typeof dNav!=='undefined' && dNav.screen==='ownerAnalytics'; }catch(e){ return false; } }
+  async function poll(){
+    if(!onScreen()){ stop(); return; }
+    if(document.visibilityState==='hidden') return;
+    try{ var r=await dmApi('GET','/api/watchtower?view=owner&part=presence');
+      if(r.ok&&r.data) setPresence(r.data); else if(r.status===401||r.status===403){ stop(); return; } else pErr=(r.data&&r.data.error)||('HTTP '+r.status); }
+    catch(e){ pErr='network error'; }
+    refreshLive();
+  }
+  function start(){ if(!timer) timer=setInterval(poll,POLL_MS); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; } }
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'&&timer) poll(); });
+  window.dmCC={
+    render:function(data,range){ D=data; D._range=range||null;
+      if(data.presence&&!data._ccSeen){ data._ccSeen=true; setPresence(data.presence); }   // each Owner Analytics load brings a fresh snapshot
+      start();
+      return '<div class="dmo-h">Owner Command Center</div>'+kpis()
+        +'<div class="dmo-h">Who is online now</div><div id="dmcc_live">'+liveHtml()+'</div>'
+        +'<div class="dmo-h">Subscriber payment monitor</div><div id="dmcc_monitor">'+monitorHtml()+'</div>'; },
+    openShop:function(id){ openShopId=id; var ov=document.getElementById('dmcc_shop_ov'); if(ov) ov.remove(); ov=document.createElement('div'); ov.id='dmcc_shop_ov'; ov.className='dmcc-ov';
+      ov.innerHTML='<div class="dmcc-modal" id="dmcc_shop_modal" role="dialog" aria-modal="true"></div>'; ov.addEventListener('click',function(e){ if(e.target===ov) window.dmCC.closeShop(); }); document.body.appendChild(ov); paintShop(); },
+    closeShop:function(){ openShopId=null; var ov=document.getElementById('dmcc_shop_ov'); if(ov) ov.remove(); },
+    toggleOffline:function(v){ showOffline=!!v; refreshLive(); },
+    filter:function(v){ billFilter=v||''; var c=document.getElementById('dmcc_monitor'); if(c) c.innerHTML=monitorHtml(); },
+    fb:async function(id,st){ if(typeof window.dmOwnerSetFb==='function'){ await window.dmOwnerSetFb(id,st); paintShop(); } },
+    _test:{ setPresence:setPresence, people:people, stale:stale, poll:poll, stop:stop }
+  };
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&openShopId) window.dmCC.closeShop(); });
+})();
+</script>
+<script id="dm-presence-js">
+/* Live-activity heartbeat. Runs for every signed-in user; sends only: a random per-tab id, the screen name, whether there
+   was keyboard / mouse / touch input since the last beat, and the device class. Never sends content, keystrokes or data. */
+(function(){
+  if(window.__dmPresence) return; window.__dmPresence=true;
+  var URL_='/api/watchtower?view=presence', sid=null, lastInput=0, lastBeat=0, inflight=false, offUntil=0, VISIBLE_MS=30000, HIDDEN_MS=60000;
+  function uuid(){ try{ if(crypto.randomUUID) return crypto.randomUUID(); var b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128; var h=[].map.call(b,function(x){return (x+256).toString(16).slice(1);}).join(''); return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20); }catch(e){ return null; } }
+  try{ sid=sessionStorage.getItem('dmPresenceSid'); }catch(e){}
+  if(!sid||!/^[0-9a-f-]{36}$/i.test(sid)){ sid=uuid(); try{ sessionStorage.setItem('dmPresenceSid',sid); }catch(e){} }
+  if(!sid) return;
+  function mark(){ var n=Date.now(); var wasIdle=n-lastInput>60000; lastInput=n; if(wasIdle && n-lastBeat>12000) setTimeout(function(){ beat(false); },800); }
+  ['pointerdown','keydown','touchstart','wheel','mousemove','scroll'].forEach(function(ev){ window.addEventListener(ev,mark,{passive:true,capture:true}); });
+  function device(){ var w=window.innerWidth||1200, t=('ontouchstart' in window)||(navigator.maxTouchPoints>0); return w<768?'mobile':(t&&w<1367)?'tablet':'desktop'; }
+  function page(){ try{ var ds=document.getElementById('desktopShell'); if(ds&&ds.style.display!=='none'&&typeof dNav!=='undefined'&&dNav&&dNav.screen) return String(dNav.screen); }catch(e){} try{ if(typeof currentMode!=='undefined'&&currentMode) return String(currentMode); }catch(e){} return 'app'; }
+  function session(){ try{ return typeof dmGetSession==='function'?dmGetSession():null; }catch(e){ return null; } }
+  function signedIn(){ try{ return typeof dmApi==='function' && !!session() && (typeof DM_CLOUD==='undefined'||!!DM_CLOUD); }catch(e){ return false; } }
+  async function beat(end){
+    if(inflight||Date.now()<offUntil||!signedIn()) return; inflight=true;
+    var active=lastInput>lastBeat;
+    try{ var r=await dmApi('POST',URL_,{session:sid,page:page(),active:active,device:device(),end:!!end});
+      if(r.ok) lastBeat=Date.now();
+      else if(r.status===503&&r.data&&r.data.code==='presence_disabled') offUntil=Date.now()+10*60000;   // migration not applied yet: back off
+      else offUntil=Date.now()+60000;
+    }catch(e){ offUntil=Date.now()+30000; }
+    inflight=false;
+  }
+  function endNow(tok){ try{ if(!tok) return; fetch(URL_,{method:'POST',keepalive:true,headers:{'content-type':'application/json',authorization:'Bearer '+tok},body:JSON.stringify({session:sid,page:page(),active:false,device:device(),end:true})}).catch(function(){}); }catch(e){} }
+  setInterval(function(){ var due=document.visibilityState==='hidden'?HIDDEN_MS:VISIBLE_MS; if(Date.now()-lastBeat>=due) beat(false); },5000);
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') beat(false); });
+  window.addEventListener('pagehide',function(){ var s=session(); if(s&&s.access_token) endNow(s.access_token); });
+  window.addEventListener('pageshow',function(e){ if(e.persisted) beat(false); });
+  // Signing out ends this tab's session at once (dmSignOut clears the session through dmSetSession(null)).
+  var set=window.dmSetSession; if(typeof set==='function') window.dmSetSession=function(s){ if(!s){ var old=session(); if(old&&old.access_token) endNow(old.access_token); } return set.apply(this,arguments); };
+  setTimeout(function(){ beat(false); },3000);
+})();
+</script>

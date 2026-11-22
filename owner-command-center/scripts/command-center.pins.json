@@ -1,0 +1,13 @@
+{
+ "own": {
+  "scripts/cc-lib.js": "ddbc35468bded25605914b5e1545083d28745dffdaf089787e6841f3dd83e918",
+  "scripts/cc-presence.js": "d19ae955afacd753fe5ac648f4e3d5374dc18226d3c4b26917dbd426f070e9e7",
+  "scripts/cc-ui.html": "ff4363632de82d1816a9aaf8e2259ba83d2904edb600715248884ec6a497441b",
+  "scripts/cc-tests.mjs": "85c3472d1de41b8329dae13254b2a9f0693c52b61d0c48213eaf52bc576655a7"
+ },
+ "inputs": {
+  "api/watchtower.js": "8e0e97fc7de381bff5369060489e24ff1bbbf704",
+  "api/_lib/owner.js": "3f3d6aa49932d54d456ee2c30b3de7a0d9549a02",
+  "api/_lib/supabase.js": "9a73d1e4b593b3b0add0727ac4cf4e59b67dc501"
+ }
+}

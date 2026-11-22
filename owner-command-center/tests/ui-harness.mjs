@@ -52,4 +52,5 @@ function showToast(){} window.dRenderMain=function(){ document.getElementById('d
 window.renderDesktop=function(){ document.getElementById('desktopShell').innerHTML='<div class="d-sidebar-scroll"></div><div id="dMain"></div>'; window.dRenderMain(); };</script>`;
 const html = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' + stub + '</head><body><div id="desktopShell"></div>' + body + '<script>renderDesktop();</script></body></html>';
 fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, 'harness-' + mode + '.html'), html);
+fs.writeFileSync(path.join(outDir, 'fixture-' + mode + '.json'), JSON.stringify(dash));
 console.log('wrote', path.join(outDir, 'harness-' + mode + '.html'));

@@ -32,3 +32,10 @@ Security: Owner data stays behind the existing `is_platform_owner()` check, whic
 - Applied as migration `20261122134002 owner_live_presence`. After applying, the live objects match the reviewed fingerprints; anon has no access; shops=3, employees=3 unchanged.
 - Post-apply test on the live objects (rolled back): **5/5 PASS**. Both non-owner accounts refused, cross-shop write refused, owner sees per-shop green/yellow, sign-out turns red immediately. No test rows remain.
 - Rollback, if ever needed: `supabase/rollback_20261122_owner_live_presence.sql`.
+
+## Production release: 2026-11-22
+- Released as `dpl_HEozbGrfqd7zpK3212SarRXRXWTj` (same files as staging `dpl_6mg1Qpv…`, pinned commit `f9aadaf`, built with the Production environment variables). The previous production build `dpl_7iiDpuTrUswM2dJBPAH2RWGQGFyE` stays available for rollback.
+- The build passed every existing step plus the Command Center tests. Its output is byte-identical to staging: page 4,594,612 bytes, `watchtower.js` sha1 `1f25bf3b…`, `owner.js` sha1 `d1655fa4…`.
+- Live checks: the heartbeat route accepts POST only; Watchtower's duplicate Overview tab is removed; the served page contains no Stripe or service-role keys; no runtime errors in the first hour.
+- First real heartbeat: the platform-owner account on desktop, Owner Analytics screen, status active (green).
+- Rollback, if needed: promote `dpl_7iiDpuTrUswM2dJBPAH2RWGQGFyE` in Vercel. The database objects can stay; the old page simply stops sending heartbeats.

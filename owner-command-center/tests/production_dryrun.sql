@@ -1,6 +1,8 @@
--- Production DRY RUN: everything below runs in ONE implicit transaction and ends by raising an exception,
+-- Production DRY RUN (read-only result; rollback rehearsal lives in the local test): everything below runs in ONE implicit transaction and ends by raising an exception,
 -- so Postgres rolls ALL of it back. Nothing persists. The exception message carries the results.
 create temp table _r (n serial, check_name text, pass boolean, detail text);
+create temp table _before as select (select count(*) from public.shops) shops, (select count(*) from public.employees) employees, (select count(*) from public.profiles) profiles, (select count(*) from auth.users) users, (select count(*) from public.feedback_items) feedback, (select count(*) from public.stripe_events) stripe_events, (select md5(string_agg(pg_get_functiondef(oid)::text, '' order by proname)) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('is_platform_owner','owner_dashboard','current_shop_id','current_shop_role')) fn_sig;
+insert into _r(check_name, pass, detail) select 'nothing to overwrite: no existing user_presence table/index or presence functions', (select count(*) from pg_class where relnamespace = 'public'::regnamespace and relname in ('user_presence','user_presence_seen_idx','user_presence_user_idx')) = 0 and (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('presence_heartbeat','owner_presence','owner_presence_prune')) = 0, '';
 -- @@MIGRATION@@
 insert into _r(check_name, pass, detail) select 'functions match reviewed bodies', bool_and(md5(prosrc) = case proname when 'owner_presence' then '165ba4e792582fe0fd488ee4ee1936ab' when 'owner_presence_prune' then 'ba9c9f60248330c2c3ea4732cfd6aff2' when 'presence_heartbeat' then '6b5e15152d953938124dafad73316736' end), string_agg(proname, ',') from pg_proc where pronamespace = 'public'::regnamespace and proname in ('presence_heartbeat','owner_presence','owner_presence_prune');
 insert into _r(check_name, pass, detail) select 'rls enabled, no policies', relrowsecurity and not exists (select 1 from pg_policy where polrelid = c.oid), '' from pg_class c where c.oid = 'public.user_presence'::regclass;
@@ -40,13 +42,10 @@ insert into _r(check_name, pass, detail) select 'owner sees THE GARAGE sessions:
   and exists (select 1 from jsonb_array_elements(p->'sessions') s where s->>'device' = 'mobile' and s->>'status' = 'idle'), (p->'thresholds')::text
   from (select public.owner_presence() p) x;
 reset role;
-update public.user_presence set last_seen_at = now() - interval '3 minutes' where session_id = 'd7000000-0000-4000-8000-000000000001';
+insert into public.user_presence (session_id, user_id, shop_id, started_at, last_seen_at, last_active_at, device) values ('d7000000-0000-4000-8000-000000000003', 'bffc1a13-07c4-47f9-869a-d38b8fec0ee4', '09094c80-6eaf-46a5-ba85-ce8226098c67', now() - interval '20 minutes', now() - interval '3 minutes', now() - interval '4 minutes', 'tablet');
 set local role authenticated;
-insert into _r(check_name, pass, detail) select 'no heartbeat for 3 min -> OFFLINE (red)', (select s->>'status' from jsonb_array_elements(public.owner_presence()->'sessions') s where s->>'sessionId' = 'd7000000-0000-4000-8000-000000000001') = 'offline', '';
+insert into _r(check_name, pass, detail) select 'no heartbeat for 3 min -> OFFLINE (red)', (select s->>'status' from jsonb_array_elements(public.owner_presence()->'sessions') s where s->>'sessionId' = 'd7000000-0000-4000-8000-000000000003') = 'offline', '';
 reset role;
--- rollback procedure
--- @@ROLLBACK@@
-insert into _r(check_name, pass, detail) select 'rollback removes every object', not exists (select 1 from pg_class where relname = 'user_presence' and relnamespace = 'public'::regnamespace) and not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname in ('presence_heartbeat','owner_presence','owner_presence_prune')), '';
-insert into _r(check_name, pass, detail) select 'existing owner functions untouched', exists (select 1 from pg_proc where proname = 'owner_dashboard') and exists (select 1 from pg_proc where proname = 'is_platform_owner'), '';
+insert into _r(check_name, pass, detail) select 'existing data and owner functions unchanged', b.shops = (select count(*) from public.shops) and b.employees = (select count(*) from public.employees) and b.profiles = (select count(*) from public.profiles) and b.users = (select count(*) from auth.users) and b.feedback = (select count(*) from public.feedback_items) and b.stripe_events = (select count(*) from public.stripe_events) and b.fn_sig = (select md5(string_agg(pg_get_functiondef(oid)::text, '' order by proname)) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('is_platform_owner','owner_dashboard','current_shop_id','current_shop_role')), 'shops='||b.shops||' employees='||b.employees||' users='||b.users from _before b;
 do $$ declare m text; begin select string_agg(n||'. '||case when pass then 'PASS' else 'FAIL' end||' | '||check_name||coalesce(' | '||nullif(detail,''),''), E'\n' order by n) into m from _r;
   raise exception 'DRYRUN_COMPLETE (all rolled back)%', E'\n'||m; end $$;

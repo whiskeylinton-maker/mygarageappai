@@ -25,3 +25,10 @@ Security: Owner data stays behind the existing `is_platform_owner()` check, whic
 ## Tests
 - `tests/presence_test.sql`: 21 database checks on a throwaway local Postgres (access control, transitions, throttling, retention).
 - `tests/ui-harness.mjs` + `tests/ui-test.cjs`: 36 browser checks at desktop, tablet and phone widths, using clearly labelled fixtures. Nothing in these tests touches production.
+
+## Production record: 2026-11-22
+- Migration file SHA-256 `2f400d5c…` = reviewed commit `f9aadaf`.
+- Production dry run (`tests/production_dryrun.sql`, one transaction, rolled back): **16/16 PASS**. Checks: nothing overwritten, function bodies match the reviewed fingerprints, RLS on with no policies, no anon/app table access, anon can't execute, SECURITY DEFINER with an empty search_path, THE GARAGE owner and the internal shop_owner refused owner data, cross-shop session write refused, green/yellow/red correct, existing data and owner functions unchanged.
+- Applied as migration `20261122134002 owner_live_presence`. After applying, the live objects match the reviewed fingerprints; anon has no access; shops=3, employees=3 unchanged.
+- Post-apply test on the live objects (rolled back): **5/5 PASS**. Both non-owner accounts refused, cross-shop write refused, owner sees per-shop green/yellow, sign-out turns red immediately. No test rows remain.
+- Rollback, if ever needed: `supabase/rollback_20261122_owner_live_presence.sql`.

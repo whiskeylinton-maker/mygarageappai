@@ -1,0 +1,502 @@
+{
+ "project": "prj_BIwkwPALPyDIMy2DEjzLUJMluZyN",
+ "team": "team_kB76g1MRNBu0BFLbqDNnYLtD",
+ "domain": "www.drivemetrik.com",
+ "currentProduction": "dpl_HEozbGrfqd7zpK3212SarRXRXWTj",
+ "previousProduction": "dpl_7iiDpuTrUswM2dJBPAH2RWGQGFyE",
+ "recordedAt": "2026-11-22",
+ "note": "Every source file of the live production deployment, by SHA1. Vercel stores each file by SHA1, so a deployment can be recreated byte-for-byte by referencing these SHAs (see tools/deploy-request.mjs).",
+ "files": [
+  {
+   "path": "api/_lib/admin.js",
+   "sha1": "0063e8df761bc15941b27e0da7ba99b064820829"
+  },
+  {
+   "path": "api/_lib/ai.js",
+   "sha1": "87aecadf24766a0569e4af4ff476fce5897e93ce"
+  },
+  {
+   "path": "api/_lib/appointments.js",
+   "sha1": "6682e45722b6c0cdb741c2398f3b3c8d135c9e27"
+  },
+  {
+   "path": "api/_lib/guard.js",
+   "sha1": "aaec7e2c43699f4fb1d15c52032d3753e909e106"
+  },
+  {
+   "path": "api/_lib/invoice-math.js",
+   "sha1": "174706520753592ef71bde746c6c5f3a9f9bbb32"
+  },
+  {
+   "path": "api/_lib/invoice-totals.js",
+   "sha1": "f8e93622770f6b46fd1c6d5e9cb5420a7fa3a0ff"
+  },
+  {
+   "path": "api/_lib/plans.js",
+   "sha1": "84af86f93806871f1968dd1b372e4b5a7cf46d25"
+  },
+  {
+   "path": "api/_lib/supabase.js",
+   "sha1": "9a73d1e4b593b3b0add0727ac4cf4e59b67dc501"
+  },
+  {
+   "path": "api/assist.js",
+   "sha1": "5224b108dc433550f744d0ec6ac23e059f2a5f16"
+  },
+  {
+   "path": "api/auth/[action].js",
+   "sha1": "bcf4fc4007be962bcdfe2d1b3f2f2474d90854f1"
+  },
+  {
+   "path": "api/create-checkout-session.js",
+   "sha1": "b29df6d509dcccfc9380e83b4f7ae1f54e35fc89"
+  },
+  {
+   "path": "api/create-subscription-checkout.js",
+   "sha1": "5334c079b66bbd3d0a0278fa1706d73811e3f02b"
+  },
+  {
+   "path": "api/customers.js",
+   "sha1": "f77c30e6da737aabef8c0d7930d31a26c5b67a92"
+  },
+  {
+   "path": "api/db-status.js",
+   "sha1": "5fd4fd17a5fd96d12033b65667c58f162abb5b32"
+  },
+  {
+   "path": "api/drive.js",
+   "sha1": "d1de7a64c349e4355cdf4b6349fc5dbf7494c964"
+  },
+  {
+   "path": "api/invoices.js",
+   "sha1": "7269709f2fa04954836c7eee874819b8c8c73ccf"
+  },
+  {
+   "path": "api/package.json",
+   "sha1": "7921faecc39765e12cc904dae0dc254c53ce7979"
+  },
+  {
+   "path": "api/shop.js",
+   "sha1": "10872b436c0456d454054803e47dba07410cb8d4"
+  },
+  {
+   "path": "api/stripe-webhook.js",
+   "sha1": "4ccfe29ddc69e89bf3f784b9c864ad0ad5294857"
+  },
+  {
+   "path": "api/vehicles.js",
+   "sha1": "3943be9f1c59d5648392d8ac903d31d9b7d91e28"
+  },
+  {
+   "path": "api/watchtower.js",
+   "sha1": "5228c1fa42c9fdaecbb46d6318eea32bb5283aa1"
+  },
+  {
+   "path": "package.json",
+   "sha1": "7921faecc39765e12cc904dae0dc254c53ce7979"
+  },
+  {
+   "path": "public/watchtower.html",
+   "sha1": "f0aa8b92d3c740a12b4824e337f9fdf70050a2e1"
+  },
+  {
+   "path": "scripts/ai-gate.html",
+   "sha1": "555599258e765ec9dc5679b3052c36d98be89cdb"
+  },
+  {
+   "path": "scripts/aigate.mjs",
+   "sha1": "e3f474cbe58cef65423d2c2f8ad70713d53bfa2c"
+  },
+  {
+   "path": "scripts/appt.1.bin",
+   "sha1": "830c34f4dff2b0d6416d31ed3f8319b32a964f46"
+  },
+  {
+   "path": "scripts/appt.10.bin",
+   "sha1": "90e077f3a3df188b1686c866132b568c4c2c7afd"
+  },
+  {
+   "path": "scripts/appt.2.bin",
+   "sha1": "01f9d553903a3d42be9188e30868a9e076d3cdd2"
+  },
+  {
+   "path": "scripts/appt.3.bin",
+   "sha1": "fd0b4fb87dcd0ad3eb0049b0b105cff4eff0b3c8"
+  },
+  {
+   "path": "scripts/appt.4.bin",
+   "sha1": "dc80d861b42fee8eeae39a67479824d5c162283b"
+  },
+  {
+   "path": "scripts/appt.5.bin",
+   "sha1": "f601a4a3ef02a3bb3f2c0335c7afa505f0ff7922"
+  },
+  {
+   "path": "scripts/appt.6.bin",
+   "sha1": "3f8adc9732847ae65e41da3f25e7e80132cf2a45"
+  },
+  {
+   "path": "scripts/appt.7.bin",
+   "sha1": "4b9fed4e8efaeb0a8471e6139e0edc7dcf37bcbe"
+  },
+  {
+   "path": "scripts/appt.8.bin",
+   "sha1": "802c928d9f30ac792e1f1a4e811504e30e5dba21"
+  },
+  {
+   "path": "scripts/appt.9.bin",
+   "sha1": "6afb64c78da4ca494e0201745d1c33a364e625a0"
+  },
+  {
+   "path": "scripts/bill.1.bin",
+   "sha1": "cf00a59eaa6766f724bdf18d2ed77b905b425a4b"
+  },
+  {
+   "path": "scripts/bill.2.bin",
+   "sha1": "4e3d38feea2933e021a2458f5668c10ff3628afe"
+  },
+  {
+   "path": "scripts/bill.3.bin",
+   "sha1": "c687f0fd3a5dec380e20ad8a24b67bf19c902a03"
+  },
+  {
+   "path": "scripts/bill.4.bin",
+   "sha1": "5dda12f50766fd8d54d65699af3f7faacbe25ecf"
+  },
+  {
+   "path": "scripts/bill.5.bin",
+   "sha1": "03a29273ce0b83fe4c041df4c53291482aaf7ae3"
+  },
+  {
+   "path": "scripts/bill.6.bin",
+   "sha1": "dbe641be4168269aadaf77407cadd45dbf87b5ee"
+  },
+  {
+   "path": "scripts/billing-owner.js",
+   "sha1": "7b0abc3bf9d935fd390df3c54d57170e2c1cdcbb"
+  },
+  {
+   "path": "scripts/build.mjs",
+   "sha1": "20a88e8fa5cf483c92d6e244636b282ffbf7d0c7"
+  },
+  {
+   "path": "scripts/copy.1.bin",
+   "sha1": "92e0e68eb00809034a520810bd91e68610f40b8b"
+  },
+  {
+   "path": "scripts/copy.2.bin",
+   "sha1": "62839279606dadf180d08ceed668495e0616820b"
+  },
+  {
+   "path": "scripts/copy.3.bin",
+   "sha1": "4bc914d3672b877c9ac636dac2db029b3e7e45ab"
+  },
+  {
+   "path": "scripts/coupons-lib.js",
+   "sha1": "a2b9a7d6b968b76ec0c769fd84f135114050f363"
+  },
+  {
+   "path": "scripts/coupons-ui.html",
+   "sha1": "d5342e762f5c2e8a82d88f560c2e3ae98411715b"
+  },
+  {
+   "path": "scripts/coupons.mjs",
+   "sha1": "1845c726782c96205fa929be14347cd3bea7504f"
+  },
+  {
+   "path": "scripts/feedback-lib.js",
+   "sha1": "dd1e423f6acb22fa824547bd9a3f62d4358b436b"
+  },
+  {
+   "path": "scripts/feedback.mjs",
+   "sha1": "ad0401a3ad3dbb1ccef3d7b004afb1c129ad7019"
+  },
+  {
+   "path": "scripts/hide.1.bin",
+   "sha1": "ec1d2069bb1c1895cb4f40de31d0635684366ca8"
+  },
+  {
+   "path": "scripts/hide.2.bin",
+   "sha1": "d27e3dfbb0af8a890f34bb6470a9b4612dfb8571"
+  },
+  {
+   "path": "scripts/hide.3.bin",
+   "sha1": "a97ab95471d664f4c12a5c8cde94fcd8ca05fc32"
+  },
+  {
+   "path": "scripts/index.patch.json",
+   "sha1": "02fc52e0db705fa4877ab567f3877a8bd888c462"
+  },
+  {
+   "path": "scripts/inv.1.bin",
+   "sha1": "840a2df79a51f6b9fcc5d82311f855fcc0a98f8a"
+  },
+  {
+   "path": "scripts/inv.10.bin",
+   "sha1": "f3d0d6fe691fd718c255992f003ba1e8f5ed8262"
+  },
+  {
+   "path": "scripts/inv.11.bin",
+   "sha1": "5157295adfffa69a1a605653f887389b59f960d1"
+  },
+  {
+   "path": "scripts/inv.12.bin",
+   "sha1": "92d13cbac2c0fa24c76bf5bd3c4f326063d21e22"
+  },
+  {
+   "path": "scripts/inv.13.bin",
+   "sha1": "c378a0317e0aad51d67355f0bc3250130404c0eb"
+  },
+  {
+   "path": "scripts/inv.14.bin",
+   "sha1": "7663a849eb2a701bcc6da4900e64b47f0c05fa3b"
+  },
+  {
+   "path": "scripts/inv.2.bin",
+   "sha1": "5d0014c6b47a735766be02c9e313c22ceccd7999"
+  },
+  {
+   "path": "scripts/inv.3.bin",
+   "sha1": "8160b16d6f686ddec24900fb5484ab22089750b7"
+  },
+  {
+   "path": "scripts/inv.4.bin",
+   "sha1": "cc5c66361b6284e97715ae1fe03381c4ddc311b5"
+  },
+  {
+   "path": "scripts/inv.5.bin",
+   "sha1": "93ea261c0df4ae6df2348854604eb536fdfee35b"
+  },
+  {
+   "path": "scripts/inv.6.bin",
+   "sha1": "198c7ed88b767372bc3d8a88d964779fa424d29c"
+  },
+  {
+   "path": "scripts/inv.7.bin",
+   "sha1": "49c92a7bfab3e06098105188d12af7920a7120ac"
+  },
+  {
+   "path": "scripts/inv.8.bin",
+   "sha1": "0da8c6b965d2cbfe197f4063618b5e7af6c6c05e"
+  },
+  {
+   "path": "scripts/inv.9.bin",
+   "sha1": "3b715a4c2c5a652d0f991f7eabf767b80d1e406f"
+  },
+  {
+   "path": "scripts/jobs-lib.js",
+   "sha1": "ac67138cebd1ca788df4561fa660330c8c46e214"
+  },
+  {
+   "path": "scripts/jobs-ui.html",
+   "sha1": "6c6ca02e97ee99d891fc2294dc58ab9d69062789"
+  },
+  {
+   "path": "scripts/jobs.mjs",
+   "sha1": "5c8569bff16eaa8ceff005c7948d592f78b38ebf"
+  },
+  {
+   "path": "scripts/offers.1.bin",
+   "sha1": "6a33490099c90b31fe3fb05b9d64047b3056c034"
+  },
+  {
+   "path": "scripts/offers.10.bin",
+   "sha1": "51d6ff54a5ac97a0f20e22669e0386017997bc89"
+  },
+  {
+   "path": "scripts/offers.11.bin",
+   "sha1": "c3812a2b683289bba497f088b107efabe5498bab"
+  },
+  {
+   "path": "scripts/offers.12.bin",
+   "sha1": "442925b9f99b2cc7e718d4e972380edb7a7eb647"
+  },
+  {
+   "path": "scripts/offers.13.bin",
+   "sha1": "861a0f3031462b420a46ccd559b0bbed82830bc1"
+  },
+  {
+   "path": "scripts/offers.14.bin",
+   "sha1": "563b95a268f9227611630d3eae464814242e2624"
+  },
+  {
+   "path": "scripts/offers.15.bin",
+   "sha1": "276302cd8a131f948edd85b439e58bd3f2dbb46f"
+  },
+  {
+   "path": "scripts/offers.16.bin",
+   "sha1": "94ae5f8863f16d35f9ecbfbb804e148a35accba4"
+  },
+  {
+   "path": "scripts/offers.17.bin",
+   "sha1": "aa27466b3e3c42b819df5aeb9baf7117c14d2bbc"
+  },
+  {
+   "path": "scripts/offers.18.bin",
+   "sha1": "6104ee095e080ba402ed352453b1eeedcfa3c76b"
+  },
+  {
+   "path": "scripts/offers.19.bin",
+   "sha1": "b3bf2a2442f571942df67eab53a4d028d90b6035"
+  },
+  {
+   "path": "scripts/offers.2.bin",
+   "sha1": "aa87dc80a2d73a19c8de4fcf714ca85de99b6bf0"
+  },
+  {
+   "path": "scripts/offers.20.bin",
+   "sha1": "702f0a58f3d962913ffd3cc700578c3317ddf514"
+  },
+  {
+   "path": "scripts/offers.21.bin",
+   "sha1": "92ac0b7b2577fb83c37277d4de499f02989f8862"
+  },
+  {
+   "path": "scripts/offers.22.bin",
+   "sha1": "941ddb44f8f42dce140a79da97f3171af945f563"
+  },
+  {
+   "path": "scripts/offers.23.bin",
+   "sha1": "b7bee1e1ca46011479d5365e995f62d4d273dac6"
+  },
+  {
+   "path": "scripts/offers.24.bin",
+   "sha1": "aa93ade8f902fcafc29a949561b87b6173029708"
+  },
+  {
+   "path": "scripts/offers.25.bin",
+   "sha1": "4567dde37f5ebdfaebe9b5f87ca734299d979935"
+  },
+  {
+   "path": "scripts/offers.26.bin",
+   "sha1": "d46309c45d64598a5b879efc0280c0ee0a7c9661"
+  },
+  {
+   "path": "scripts/offers.3.bin",
+   "sha1": "367536e43c6eb55552576fe012100d9de56c347b"
+  },
+  {
+   "path": "scripts/offers.4.bin",
+   "sha1": "fde3697e01e9b712dee896830f06b73042204234"
+  },
+  {
+   "path": "scripts/offers.5.bin",
+   "sha1": "69944c43a86b49a8b40508406ac492056386fa5c"
+  },
+  {
+   "path": "scripts/offers.6.bin",
+   "sha1": "c8cd098aee695515ffa25c79fd436fbcf2d517cb"
+  },
+  {
+   "path": "scripts/offers.7.bin",
+   "sha1": "204e15b5119e61a305ca67c5fa36ebdab9ae89a6"
+  },
+  {
+   "path": "scripts/offers.8.bin",
+   "sha1": "15f7e46a2135e5d6f1f86af90c64475eb30e5c9a"
+  },
+  {
+   "path": "scripts/offers.9.bin",
+   "sha1": "bda32a048b9033ea05619e14a8b83cd11f10e737"
+  },
+  {
+   "path": "scripts/offers.mjs",
+   "sha1": "b69ca16557819baff4607a185ce4424f10584d9d"
+  },
+  {
+   "path": "scripts/owner-tests.mjs",
+   "sha1": "e87b0481121df0c86661e9e22aabf0181f30e11e"
+  },
+  {
+   "path": "scripts/owner-ui.html",
+   "sha1": "ca999124d9caaa390f72fe47c82ff83b2c605fb4"
+  },
+  {
+   "path": "scripts/owner-v3-patch.mjs",
+   "sha1": "1277706c1866a07f45e3fc0e256472a36644b4f4"
+  },
+  {
+   "path": "scripts/owner.mjs",
+   "sha1": "7b606acd4f8223dcc5e9cc3b9deb9dd731526908"
+  },
+  {
+   "path": "scripts/security.mjs",
+   "sha1": "8b188e7c527a2b2d89b77e4f5178857471b119c8"
+  },
+  {
+   "path": "scripts/tablet-nav.html",
+   "sha1": "fe79bb90dcac94612cdf7a1935eb93bf575ccb3a"
+  },
+  {
+   "path": "scripts/tablet.mjs",
+   "sha1": "2cbe4ccffb7c73ef77c45278c44f5dfbabd0bc42"
+  },
+  {
+   "path": "scripts/trial.1.bin",
+   "sha1": "1c1b5be6b4bda6990d2fe04bcc8566c5e367a290"
+  },
+  {
+   "path": "scripts/trial.2.bin",
+   "sha1": "6c712d7cbe0d71b5d7f36960f40c87c06403b13c"
+  },
+  {
+   "path": "scripts/trial.3.bin",
+   "sha1": "2248a71c918780d89f0c887db43435f550a3fb7e"
+  },
+  {
+   "path": "scripts/trial.4.bin",
+   "sha1": "1d9001d4cdaed43c515773bd0b4b7b0f1b45809e"
+  },
+  {
+   "path": "scripts/ui.1.bin",
+   "sha1": "212096d389d2a4f500d2f4f916c3ef9aeed2d882"
+  },
+  {
+   "path": "scripts/ui.2.bin",
+   "sha1": "3651000f7c7a63272f7f2f6ec909035518700b36"
+  },
+  {
+   "path": "scripts/ui.3.bin",
+   "sha1": "fc9c6cefa6bb5313e13ac7cd039cabbf8c776d4d"
+  },
+  {
+   "path": "scripts/ui.4.bin",
+   "sha1": "39be0b113517fa20589f988f59628703f9d7ec14"
+  },
+  {
+   "path": "scripts/ui.5.bin",
+   "sha1": "f9d25959a40cc14ce6522cd59714c7d2bcac54c1"
+  },
+  {
+   "path": "scripts/ui.6.bin",
+   "sha1": "3effc64827c8ef8817f2a3353116f2930d2fe43b"
+  },
+  {
+   "path": "scripts/ui.7.bin",
+   "sha1": "770714a8fa88943b340e5fd1089dd73237515570"
+  },
+  {
+   "path": "scripts/ui.8.bin",
+   "sha1": "724d0c261add929c108006343f935e5efed9f936"
+  },
+  {
+   "path": "scripts/ui.9.bin",
+   "sha1": "045e1d8b572d234aad5d9bf1c763a11d4525f389"
+  },
+  {
+   "path": "scripts/build-chain.sh",
+   "sha1": "4382a2847eecafb8ba27196fa62e601ec625a587",
+   "inlineFrom": "owner-command-center/release/build-chain.sh"
+  },
+  {
+   "path": "scripts/fetch-cc.mjs",
+   "sha1": "73225aa990dd85006a774c8d367c33b47007b26a",
+   "inlineFrom": "owner-command-center/release/fetch-cc.mjs"
+  },
+  {
+   "path": "vercel.json",
+   "sha1": "db95bd62283a9baea092cc3561c49b1020f728b0",
+   "inlineFrom": "owner-command-center/release/vercel.json"
+  }
+ ]
+}

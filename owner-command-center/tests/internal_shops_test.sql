@@ -9,8 +9,8 @@ create function pg_temp.blocked(sid uuid) returns boolean language plpgsql as $$
 do $$ begin
   if not pg_temp.blocked('4be54af5-8371-49aa-8035-f9e5bc255075') then raise exception 'FAIL owner shop not blocked'; end if;
   if not pg_temp.blocked('d5dec7c0-c9ab-42a8-9559-d8950e06606c') then raise exception 'FAIL second internal shop not blocked'; end if;
-  if not pg_temp.blocked('aaaaaaaa-0000-4000-8000-000000000001') then raise exception 'FAIL test shop not blocked'; end if;
+  if pg_temp.blocked('aaaaaaaa-0000-4000-8000-000000000001') then raise exception 'FAIL a shop flagged is_test_data at signup was blocked'; end if;
   if pg_temp.blocked('bbbbbbbb-0000-4000-8000-000000000001') then raise exception 'FAIL real customer blocked'; end if;
   if pg_temp.blocked('09094c80-6eaf-46a5-ba85-ce8226098c67') then raise exception 'FAIL THE GARAGE (customer-type comp shop) blocked'; end if;
-  raise notice 'ok: internal + test shops refused before Stripe; real customers and THE GARAGE unaffected';
+  raise notice 'ok: both internal shops refused before Stripe; real customers, self-flagged test shops and THE GARAGE unaffected';
 end $$;

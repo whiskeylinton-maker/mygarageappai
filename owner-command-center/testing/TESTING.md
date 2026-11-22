@@ -6,7 +6,7 @@ Nothing here uses real money, live Stripe or production data.
 | | Production (drivemetrik.com) | Test |
 |---|---|---|
 | Stripe | live keys | **test-mode** keys (`sk_test_…`) |
-| Database | Supabase `DriveMetrik` | Supabase `drivemetrik-test` (schema copied from production's migration history; no customer data) |
+| Database | Supabase `DriveMetrik` (`bghcxpjfkdhuyqvlrxgo`) | Supabase `drivemetrik-test` (`rtzlcizqmphfykwsswxj`); schema replayed from production's migration history, no customer data |
 | Site | Vercel Production | Vercel Preview env vars pointing at the two test services |
 | Cards | real | Stripe test cards only (4242 4242 4242 4242) |
 
@@ -41,4 +41,4 @@ Nothing here uses real money, live Stripe or production data.
 - No coupon codes or bypasses are added to the customer-facing site.
 
 ## Owner account
-The platform-owner shop "DRIVEMETRIK OWNER" has permanent complimentary access: trialing with no end date and no Stripe IDs, so the hourly expiry job never touches it. Migration `20261123_internal_shops_never_billed.sql` (pending approval) makes it impossible for **any** internal or test shop to start a live checkout. It was verified on production in a rolled-back dry run (4/4 checks).
+The platform-owner shop "DRIVEMETRIK OWNER" has permanent complimentary access: trialing with no end date and no Stripe IDs, so the hourly expiry job never touches it. Migration `20261123_internal_shops_never_billed.sql` (pending approval) makes it impossible for either internal shop (the two "DRIVEMETRIK OWNER" shops) to start a live checkout. It does not block real customers, THE GARAGE, or shops that set the test flag at signup. Verified on production in a rolled-back dry run (5/5 checks); not yet applied.

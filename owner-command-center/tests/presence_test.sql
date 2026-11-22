@@ -1,7 +1,8 @@
 -- Local PostgreSQL test of 20261122_owner_live_presence.sql (run against a throwaway database, never production).
 -- Stubs only what Supabase provides (auth schema, roles) plus the production definitions of the helpers it calls.
 \set ON_ERROR_STOP on
-create role anon nologin; create role authenticated nologin;
+do $$ begin create role anon nologin; exception when duplicate_object then null; end $$;
+do $$ begin create role authenticated nologin; exception when duplicate_object then null; end $$;
 create schema auth;
 create table auth.users (id uuid primary key, email text, created_at timestamptz default now(), last_sign_in_at timestamptz, email_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;

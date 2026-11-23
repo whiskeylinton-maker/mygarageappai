@@ -39,3 +39,8 @@ Security: Owner data stays behind the existing `is_platform_owner()` check, whic
 - Live checks: the heartbeat route accepts POST only; Watchtower's duplicate Overview tab is removed; the served page contains no Stripe or service-role keys; no runtime errors in the first hour.
 - First real heartbeat: the platform-owner account on desktop, Owner Analytics screen, status active (green).
 - Rollback, if needed: promote `dpl_7iiDpuTrUswM2dJBPAH2RWGQGFyE` in Vercel. The database objects can stay; the old page simply stops sending heartbeats.
+
+## Production change: 2026-11-23, internal shops never billed
+- Applied `supabase/20261123_internal_shops_never_billed.sql` (SHA-256 `3824e695…`, identical to the rehearsed version) as migration `20261123030340 internal_shops_never_billed`, with owner approval. Pre-check: no newer migrations, no name conflicts, and the shops were unchanged since the rehearsal.
+- Result: THE GARAGE, DRIVEMETRIK OWNER `4be54af5` and DRIVEMETRIK OWNER `d5dec7c0` are internal, trialing, with no end date and no Stripe IDs. Each owner keeps full, non-expiring access, and staff/roles are unchanged (3, all active).
+- Live checkout is refused before Stripe for all three. A new customer shop can still subscribe (verified with rolled-back test inserts).

@@ -1,0 +1,10 @@
+select 'tables' k, count(*)::text n, md5(string_agg(tablename||':'||rowsecurity, ',' order by tablename)) h from pg_tables where schemaname='public'
+union all select 'columns', count(*)::text, md5(string_agg(table_name||'.'||column_name||':'||data_type||':'||is_nullable||':'||coalesce(column_default,''), ',' order by table_name, column_name)) from information_schema.columns where table_schema='public'
+union all select 'functions', count(*)::text, md5(string_agg(proname||'('||pg_get_function_identity_arguments(oid)||')'||md5(prosrc)||prosecdef::text||coalesce(array_to_string(proconfig,';'),''), ',' order by proname, pg_get_function_identity_arguments(oid))) from pg_proc where pronamespace='public'::regnamespace
+union all select 'policies', count(*)::text, md5(string_agg(tablename||'.'||policyname||':'||cmd||':'||array_to_string(roles,'|')||':'||coalesce(qual,'')||':'||coalesce(with_check,''), ',' order by tablename, policyname)) from pg_policies where schemaname='public'
+union all select 'triggers', count(*)::text, md5(string_agg(c.relname||'.'||t.tgname||':'||pg_get_triggerdef(t.oid), ',' order by c.relname, t.tgname)) from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and not t.tgisinternal
+union all select 'indexes', count(*)::text, md5(string_agg(indexname||':'||indexdef, ',' order by indexname)) from pg_indexes where schemaname='public'
+union all select 'table_grants', count(*)::text, md5(string_agg(grantee||'.'||table_name||'.'||privilege_type, ',' order by grantee, table_name, privilege_type)) from information_schema.role_table_grants where table_schema='public' and grantee in ('anon','authenticated','service_role')
+union all select 'func_grants', count(*)::text, md5(string_agg(grantee||'.'||routine_name||'.'||privilege_type, ',' order by grantee, routine_name, specific_name)) from information_schema.role_routine_grants where routine_schema='public' and grantee in ('anon','authenticated','service_role','PUBLIC')
+union all select 'cron', count(*)::text, md5(string_agg(jobname||':'||schedule||':'||command, ',' order by jobname)) from cron.job
+order by 1;
